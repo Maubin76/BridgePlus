@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- Fond des écrans, sombre : fenêtre au lancement, sans saut avec Compose. -->
+	<color name="ground">#FF121010</color>
+</resources>

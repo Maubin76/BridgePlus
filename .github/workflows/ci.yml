@@ -1,0 +1,229 @@
+# Intégration continue de PontPlus : à chaque push sur main, construit tout et lance
+# toute la suite de tests (module commun, appli PC, appli Android, lint), puis publie
+# une version :
+#
+# - Version : « 1.<nombre de commits> », comme dans le build Gradle (rien à
+#   incrémenter à la main, aucun commit de la CI).
+# - APK release (R8), signé avec la clé des secrets KEYSTORE_BASE64, KEY_ALIAS
+#   et KEY_PASSWORD. Sans eux : clé jetable de la CI et avertissement (un tel
+#   APK ne peut pas mettre à jour l'appli installée).
+# - Appli PC : dossier portable zippé avec PontPlus.exe et sa JVM (Windows).
+# - Release GitHub « vX.Y » avec les deux fichiers ; ses notes donnent la version du
+#   protocole de liaison (le téléphone et le PC doivent parler le même).
+#
+# Les polices Satoshi ne sont pas dans le dépôt (leur licence l'interdit) : chaque
+# construction les télécharge depuis Fontshare (ci/polices.sh).
+#
+# Lançable aussi à la main depuis l'onglet Actions (workflow_dispatch).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Exécutions à la suite, sans en interrompre une : une publication coupée en
+# plein milieu laisserait une release sans ses fichiers.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: "Récupérer les polices Satoshi (non versionnées, voir leur licence)"
+        shell: bash
+        run: bash ci/polices.sh
+
+      - name: Installer le JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Préparer Gradle (avec cache)
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Tout construire et tester (zéro avertissement, lint compris)
+        run: ./gradlew build --stacktrace
+
+      - name: Joindre les rapports de tests en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rapports-tests
+          path: |
+            core/build/reports/tests/
+            core/build/test-results/
+            desktop/build/reports/tests/
+            desktop/build/test-results/
+            app/build/reports/tests/
+            app/build/test-results/
+          retention-days: 14
+
+  version:
+    name: Numéro de version
+    needs: tests
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      sha: ${{ steps.bump.outputs.sha }}
+
+    steps:
+      - name: Récupérer le code et les tags
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Calculer la version (nombre de commits)
+        id: bump
+        run: |
+          vVersion="1.$(git rev-list --count HEAD)"
+          echo "version=$vVersion" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Version publiée : $vVersion"
+
+  android:
+    name: APK Android
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Récupérer le code de la version
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      - name: "Récupérer les polices Satoshi (non versionnées, voir leur licence)"
+        shell: bash
+        run: bash ci/polices.sh
+
+      - name: Installer le JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Préparer Gradle (avec cache)
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Construire l'APK release
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]
+          then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pontplus.jks"
+            ./gradlew :app:assembleRelease \
+              "-Ppontplus.keystore=$RUNNER_TEMP/pontplus.jks" \
+              "-Ppontplus.keyAlias=$KEY_ALIAS" \
+              "-Ppontplus.keyPassword=$KEY_PASSWORD"
+            rm "$RUNNER_TEMP/pontplus.jks"
+          else
+            echo "::warning::Secrets KEYSTORE_BASE64, KEY_ALIAS et KEY_PASSWORD absents : APK signé avec une clé jetable, qui ne peut pas mettre à jour l'appli installée."
+            ./gradlew :app:assembleRelease
+          fi
+          mv app/build/outputs/apk/release/app-release.apk "PontPlus-${{ needs.version.outputs.version }}.apk"
+
+      - name: Garder l'APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: apk
+          path: PontPlus-*.apk
+          retention-days: 7
+
+  desktop:
+    name: Appli PC (exe)
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Récupérer le code de la version
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      - name: "Récupérer les polices Satoshi (non versionnées, voir leur licence)"
+        shell: bash
+        run: bash ci/polices.sh
+
+      - name: Installer le JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Préparer Gradle (avec cache)
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Construire le dossier portable zippé
+        shell: bash
+        run: ./gradlew :desktop:packageZip
+
+      - name: Contrôler le contenu du zip
+        shell: bash
+        run: |
+          mkdir -p controle && unzip -q desktop/build/distributions/PontPlus-*-windows.zip -d controle
+          test -f controle/PontPlus/PontPlus.exe || { echo "::error::PontPlus.exe absent du zip"; exit 1; }
+
+      - name: Garder le zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: zip
+          path: desktop/build/distributions/PontPlus-*-windows.zip
+          retention-days: 7
+
+  release:
+    name: Release GitHub
+    needs: [version, android, desktop]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Récupérer le code de la version
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Récupérer l'APK et le zip
+        uses: actions/download-artifact@v7
+        with:
+          path: fichiers
+          merge-multiple: true
+
+      - name: Publier la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ needs.version.outputs.sha }}
+        run: |
+          vProtocol=$(sed -n 's/.*kLinkProtocol *= *\([0-9][0-9]*\).*/\1/p' core/src/main/kotlin/fr/maubin/pontplus/link/LinkProtocol.kt)
+          printf '%s\n\n%s\n' "Protocole de liaison : $vProtocol" "Version $VERSION : APK Android et appli PC portable (dézipper, lancer PontPlus.exe)." > notes.md
+          gh release create "v$VERSION" fichiers/* \
+            --repo "${{ github.repository }}" \
+            --target "$SHA" \
+            --title "PontPlus $VERSION" \
+            --notes-file notes.md

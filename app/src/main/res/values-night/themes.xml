@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- Thème de la fenêtre en mode sombre. -->
+	<style name="Theme.PontPlus" parent="android:Theme.Material.NoActionBar">
+		<item name="android:windowBackground">@color/ground</item>
+		<item name="android:windowSplashScreenBackground">@color/ground</item>
+	</style>
+</resources>

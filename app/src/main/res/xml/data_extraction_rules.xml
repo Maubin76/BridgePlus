@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aucune donnée de PontPlus ne part en sauvegarde ni vers un autre téléphone : les clés des paires
+     sont scellées par le Keystore de ce téléphone et n'auraient de toute façon aucun sens ailleurs. -->
+<data-extraction-rules>
+	<cloud-backup>
+		<exclude domain="root" path="." />
+		<exclude domain="file" path="." />
+		<exclude domain="database" path="." />
+		<exclude domain="sharedpref" path="." />
+		<exclude domain="external" path="." />
+	</cloud-backup>
+	<device-transfer>
+		<exclude domain="root" path="." />
+		<exclude domain="file" path="." />
+		<exclude domain="database" path="." />
+		<exclude domain="sharedpref" path="." />
+		<exclude domain="external" path="." />
+	</device-transfer>
+</data-extraction-rules>

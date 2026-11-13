@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré par LogoAssetsTest : pont blanc évidé du « + », premier plan de l'icône. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+	android:width="108dp"
+	android:height="108dp"
+	android:viewportWidth="108"
+	android:viewportHeight="108">
+	<path
+		android:fillColor="#FFFFFFFF"
+		android:fillType="evenOdd"
+		android:pathData="M22,47 H86 V53 H22 Z M28,81 V79 A26,26 0 0 1 80,79 V81 H73 V79 A19,19 0 0 0 35,79 V81 Z M51.5,27 H56.5 V31.5 H61 V36.5 H56.5 V41 H51.5 V36.5 H47 V31.5 H51.5 Z" />
+</vector>

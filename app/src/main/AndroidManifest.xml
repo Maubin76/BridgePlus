@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- allowBackup="false" : les clés des paires ne doivent jamais partir dans la sauvegarde Google.
+     Réseau : liaison avec les PC sur le Wi-Fi de la maison seulement. Localisation (premier plan et
+     arrière-plan) : lecture du nom du Wi-Fi pour reconnaître la maison, jamais d'une position.
+     Appareil photo : lecture du QR code d'appairage. Service de premier plan « connectedDevice » :
+     liaison permanente avec le PC, sans limite de durée (dataSync est limité à 6 h par jour depuis
+     Android 15) ; son prérequis est CHANGE_WIFI_STATE. Démarrage : relance de la liaison après un
+     redémarrage. Batterie : demande d'exclusion de l'optimisation, sans laquelle Android interdit de
+     relancer la liaison au retour à la maison. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+	<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+	<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+	<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+	<uses-permission android:name="android.permission.CAMERA" />
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+	<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+	<uses-feature android:name="android.hardware.camera" android:required="false" />
+
+	<application
+		android:name=".PontApp"
+		android:allowBackup="false"
+		android:dataExtractionRules="@xml/data_extraction_rules"
+		android:icon="@mipmap/ic_launcher"
+		android:label="@string/app_name"
+		android:roundIcon="@mipmap/ic_launcher"
+		android:supportsRtl="true"
+		android:theme="@style/Theme.PontPlus">
+
+		<activity
+			android:name=".MainActivity"
+			android:exported="true"
+			android:launchMode="singleTask"
+			android:windowSoftInputMode="adjustResize">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity>
+
+		<!-- Liaison permanente avec les PC, tant que le téléphone est sur le Wi-Fi de la maison. -->
+		<service
+			android:name=".LinkService"
+			android:exported="false"
+			android:foregroundServiceType="connectedDevice" />
+
+		<!-- Retour sur un Wi-Fi (rappel du système par PendingIntent) : relance de la liaison à la maison. -->
+		<receiver
+			android:name=".NetworkWatch"
+			android:exported="false" />
+
+		<!-- Redémarrage du téléphone et mise à jour de l'appli : relance de la liaison. -->
+		<receiver
+			android:name=".BootReceiver"
+			android:exported="false">
+			<intent-filter>
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+				<action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+			</intent-filter>
+		</receiver>
+	</application>
+
+</manifest>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- Thème de la fenêtre : sans barre d'action ; Compose dessine tout le reste, sur le fond de
+	     l'écran (clair ou sombre selon le système). -->
+	<style name="Theme.PontPlus" parent="android:Theme.Material.Light.NoActionBar">
+		<item name="android:windowBackground">@color/ground</item>
+		<item name="android:windowSplashScreenBackground">@color/ground</item>
+	</style>
+</resources>

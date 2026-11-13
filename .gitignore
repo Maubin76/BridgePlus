@@ -1,0 +1,21 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.kotlin/
+*.tmp
+# Polices Satoshi : licence ITF, publication interdite (téléchargées par ci/polices.sh).
+ui/src/commonMain/composeResources/font/satoshi_*.ttf
+/.idea/*
+!/.idea/misc.xml
