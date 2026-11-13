@@ -15,6 +15,7 @@ import java.text.Normalizer
 const val kHistoryLimit   = 50														// éléments non épinglés gardés
 const val kPreviewChars   = 200														// longueur de l'aperçu gardé dans l'index
 const val kKindText       = "texte"													// élément : texte du presse-papiers
+const val kKindFile       = "fichier"												// élément : fichier envoyé ou reçu
 private const val kSearchCacheChars = 64 * 1024										// textes gardés en mémoire pour la recherche (au-delà : aperçu seul)
 
 private val kHistoryJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }	// index de l'historique (versions voisines tolérées)
@@ -23,14 +24,17 @@ private val kHistoryJson = Json { ignoreUnknownKeys = true; encodeDefaults = tru
 	Élément de l'historique : un échange, avec un aperçu ; le texte complet
 	est dans son propre fichier scellé.
 	id          : identifiant (nom de son fichier)
-	kind        : nature (kKindText ; les fichiers viendront à l'étape 4)
+	kind        : nature (kKindText, kKindFile)
 	outgoing    : vrai pour un envoi, faux pour une réception
 	peers       : appareils concernés
 	at          : date du dernier échange (ms)
 	pinned      : épinglé : gardé au-delà des 50 derniers
-	preview     : début du texte (200 caractères au plus)
-	length      : longueur du texte complet (caractères)
-	fingerprint : empreinte du texte (SHA-256), pour reconnaître un texte déjà présent
+	preview     : début du texte (200 caractères au plus) ; nom d'un fichier
+	length      : longueur du texte complet (caractères) ; 0 pour un fichier
+	fingerprint : empreinte du texte (SHA-256), pour reconnaître un texte déjà
+	              présent ; vide pour un fichier
+	size        : taille d'un fichier (octets) ; 0 pour un texte
+	location    : emplacement d'un fichier (chemin, adresse) pour l'ouvrir ; vide pour un texte
 */
 @Serializable
 data class HistoryItem(
@@ -42,8 +46,14 @@ data class HistoryItem(
 	val pinned      : Boolean      = false,
 	val preview     : String,
 	val length      : Int,
-	val fingerprint : String
+	val fingerprint : String,
+	val size        : Long         = 0,
+	val location    : String       = ""
 )
+{
+	// Vrai pour un fichier.
+	val isFile: Boolean get() = kind == kKindFile
+}
 
 /*
 	Index de l'historique (scellé).
@@ -53,7 +63,8 @@ data class HistoryItem(
 data class HistoryIndex(val items: List<HistoryItem> = emptyList())
 
 /*
-	Historique des échanges du presse-papiers, conservé chiffré : un index
+	Historique des échanges (textes du presse-papiers et fichiers), conservé
+	chiffré : un index
 	scellé (aperçus, dates, épingles) et un fichier scellé par texte, pour ne
 	jamais réécrire 50 Mo à chaque échange. Les 50 derniers éléments non
 	épinglés sont gardés, les épinglés en plus ; un texte échangé de nouveau
@@ -96,7 +107,7 @@ class ClipHistory(
 	): HistoryItem
 	{
 		val vPrint = fingerprint(inText)															// empreinte
-		val vOld   = fItems.value.firstOrNull { it.fingerprint == vPrint }							// texte déjà présent
+		val vOld   = fItems.value.firstOrNull { !it.isFile && it.fingerprint == vPrint }		// texte déjà présent
 		val vItem  = HistoryItem(
 			id          = vOld?.id ?: toBase64(randomBytes(12)),
 			outgoing    = inOutgoing,
@@ -116,6 +127,41 @@ class ClipHistory(
 	}
 
 	/*
+		Ajoute un fichier envoyé ou reçu en tête : son nom, sa taille et son
+		emplacement seulement (jamais une copie du fichier). Les plus anciens
+		non épinglés au-delà de la limite sont effacés.
+		inName     : nom du fichier
+		inSize     : taille (octets)
+		inOutgoing : vrai pour un envoi
+		inPeers    : appareils concernés
+		inLocation : emplacement (chemin, adresse) ; vide s'il est inconnu
+	*/
+	@Synchronized
+	fun addFile(
+		inName     : String,
+		inSize     : Long,
+		inOutgoing : Boolean,
+		inPeers    : List<String>,
+		inLocation : String
+	): HistoryItem
+	{
+		val vItem = HistoryItem(
+			id          = toBase64(randomBytes(12)),
+			kind        = kKindFile,
+			outgoing    = inOutgoing,
+			peers       = inPeers,
+			at          = fNow(),
+			preview     = inName,
+			length      = 0,
+			fingerprint = "",
+			size        = inSize,
+			location    = inLocation
+		)																							// élément
+		save(trim(listOf(vItem) + fItems.value))
+		return vItem
+	}
+
+	/*
 		Texte complet d'un élément ; null s'il n'existe plus ou est illisible.
 		inId : élément
 	*/
@@ -123,7 +169,7 @@ class ClipHistory(
 	fun text(inId: String): String?
 	{
 		fCache[inId]?.let { return it }
-		if (fItems.value.none { it.id == inId }) return null
+		if (fItems.value.none { it.id == inId && !it.isFile }) return null
 		return textFile(inId).read()?.also { if (it.length <= kSearchCacheChars) fCache[inId] = it }
 	}
 
@@ -183,7 +229,7 @@ class ClipHistory(
 		inItem : élément
 	*/
 	private fun searchable(inItem: HistoryItem): String =
-		fCache[inItem.id] ?: if (inItem.length <= kSearchCacheChars) text(inItem.id) ?: inItem.preview else inItem.preview
+		if (inItem.isFile) inItem.preview else fCache[inItem.id] ?: if (inItem.length <= kSearchCacheChars) text(inItem.id) ?: inItem.preview else inItem.preview
 
 	/*
 		Garde les épinglés et les fLimit plus récents non épinglés ; efface les

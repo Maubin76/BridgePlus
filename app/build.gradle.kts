@@ -58,6 +58,12 @@ android {
 		targetCompatibility = JavaVersion.VERSION_17
 	}
 
+	// Zéro avertissement : une remarque de lint fait échouer la construction.
+	lint {
+		warningsAsErrors = true
+		abortOnError     = true
+	}
+
 	buildFeatures {
 		compose     = true
 		buildConfig = true

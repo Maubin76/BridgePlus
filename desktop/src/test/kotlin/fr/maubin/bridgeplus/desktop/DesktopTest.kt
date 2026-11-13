@@ -95,4 +95,18 @@ class DesktopTest
 		assertEquals("Win+Alt+V".let(Hotkey::parse).spec(), "Alt+Win+V")
 		assertEquals(vDefault, Hotkey.parse("n'importe quoi"))
 	}
+
+	/*
+		Lancements par un bouton de notification ou par l'Explorateur :
+		argument lu ; lien ne portant qu'un identifiant (encodé), jamais un
+		chemin.
+	*/
+	@Test
+	fun launchArguments()
+	{
+		assertEquals("C:/Users/moi/photo.jpg", argAfter(arrayOf("--envoyer", "C:/Users/moi/photo.jpg"), ExplorerMenu.kSendArg))
+		assertNull(argAfter(arrayOf("--envoyer"), ExplorerMenu.kSendArg))
+		assertNull(argAfter(arrayOf("--demarrage"), kLinkArg))
+		assertEquals("bridgeplus:ouvrir?id=a%2Bb%3D", WinToast.link("ouvrir", "a+b="))
+	}
 }

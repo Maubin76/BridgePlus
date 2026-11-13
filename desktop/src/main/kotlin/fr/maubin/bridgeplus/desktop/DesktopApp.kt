@@ -1,5 +1,8 @@
 package fr.maubin.bridgeplus.desktop
 
+import androidx.compose.ui.graphics.asSkiaBitmap
+import com.sun.jna.platform.win32.KnownFolders
+import com.sun.jna.platform.win32.Shell32Util
 import fr.maubin.bridgeplus.clip.ClipOutcome
 import fr.maubin.bridgeplus.clip.ClipRelay
 import fr.maubin.bridgeplus.history.ClipHistory
@@ -11,7 +14,14 @@ import fr.maubin.bridgeplus.settings.BridgeSettings
 import fr.maubin.bridgeplus.settings.SettingsStore
 import fr.maubin.bridgeplus.store.SealedFile
 import fr.maubin.bridgeplus.store.SecretBox
+import fr.maubin.bridgeplus.transfer.DiskSource
+import fr.maubin.bridgeplus.transfer.FileTransfers
+import fr.maubin.bridgeplus.transfer.FolderSink
+import fr.maubin.bridgeplus.transfer.Transfer
+import fr.maubin.bridgeplus.transfer.TransferState
+import fr.maubin.bridgeplus.transfer.sizeText
 import fr.maubin.bridgeplus.ui.components.LinkLook
+import fr.maubin.bridgeplus.ui.theme.logoImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,8 +33,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Image
 import java.io.File
 import java.util.Properties
+import java.util.concurrent.ConcurrentHashMap
 
 private const val kQuickCheckMs = 5_000L												// lecture rapide des adresses du PC
 private const val kFullCheckMs  = 60_000L												// relecture complète des réseaux, même sans changement d'adresse
@@ -35,6 +48,14 @@ private const val kFullCheckMs  = 60_000L												// relecture complète des 
 */
 fun dataDir(): File =
 	System.getenv("APPDATA")?.let { File(it, "BridgePlus") } ?: File(System.getProperty("user.home"), ".bridgeplus")
+
+/*
+	Dossier Téléchargements de l'utilisateur (dossier connu de Windows, même
+	déplacé) ; ~/Downloads ailleurs ou en cas d'échec.
+*/
+fun downloadsDir(): File =
+	runCatching { File(Shell32Util.getKnownFolderPath(KnownFolders.FOLDERID_Downloads)) }.getOrNull()?.takeIf { WinBridge.available && it.isDirectory }
+		?: File(System.getProperty("user.home"), "Downloads")
 
 /*
 	Nom de ce PC : nom de l'ordinateur sous Windows, sinon nom d'hôte.
@@ -125,13 +146,34 @@ class DesktopApp(
 	*/
 	val history = ClipHistory(File(fDir, "historique"), fBox)
 
+	private val fChoice   = MutableStateFlow<List<File>?>(null)							// fichiers en attente du choix du téléphone ; null sans
+	private val fSources  = ConcurrentHashMap<String, String>()							// chemins des fichiers envoyés, par transfert
+
 	/*
 		Liaison avec les téléphones ; les textes reçus vont au relais du
-		presse-papiers.
+		presse-papiers, les fichiers aux transferts.
 	*/
-	val link: PcLink = PcLink(SealedFile(File(fDir, "appareils.bin"), fBox), pcName(), appVersion() ?: "dev", fNetworks, { vPhone, vMessage ->
-		if (vMessage is LinkMessage.Clip) clips.receive(vPhone.label, vMessage)
-	})
+	val link: PcLink = PcLink(
+		fFile      = SealedFile(File(fDir, "appareils.bin"), fBox),
+		fName      = pcName(),
+		fVersion   = appVersion() ?: "dev",
+		fNetworks  = fNetworks,
+		fOnMessage = { vPhone, vMessage -> if (vMessage is LinkMessage.Clip) clips.receive(vPhone.label, vMessage) else files.onMessage(vPhone.id, vPhone.label, vMessage) },
+		fOnChunk   = { vPhone, vChunk -> files.onChunk(vPhone.id, vChunk) },
+		fOnClosed  = { vPhone -> files.onDisconnected(vPhone.id) }
+	)
+
+	/*
+		Transferts de fichiers avec les téléphones ; réception dans le dossier
+		réglé (Téléchargements\BridgePlus par défaut).
+	*/
+	val files: FileTransfers = FileTransfers(link::send, link::sendChunk, FolderSink(::receiveDir), ::transferFinished)
+
+	/*
+		Fichiers en attente du choix du téléphone (plusieurs sont reliés) ;
+		null sans.
+	*/
+	val pendingChoice: StateFlow<List<File>?> = fChoice
 
 	/*
 		Relais du presse-papiers : copies du PC vers les téléphones reliés,
@@ -173,6 +215,7 @@ class DesktopApp(
 	{
 		if (WinBridge.available)
 		{
+			fScope.launch { runCatching { WinToast.setup(writeIcon()) } }
 			fBoard = WinBridge(::copied) { ActiveWindow.current().takeIf { !it.isOwn }?.let { fPresses.tryEmit(it) } }.also { it.start() }
 			fScope.launch { registerHotkey() }
 		}
@@ -202,6 +245,147 @@ class DesktopApp(
 	{
 		val vHotkey = Hotkey.parse(fSettings.value.historyHotkey)										// raccourci réglé
 		fHotkeyOk.value = fBoard?.register(vHotkey.modifiers, vHotkey.key) ?: true
+	}
+
+	/*
+		Dossier de réception des fichiers : celui des réglages, sinon
+		Téléchargements\BridgePlus.
+	*/
+	fun receiveDir(): File = fSettings.value.receiveFolder.takeIf { it.isNotBlank() }?.let(::File) ?: File(downloadsDir(), "BridgePlus")
+
+	/*
+		Envoie des fichiers à un téléphone : celui donné, le seul relié, ou,
+		s'il y en a plusieurs, celui que l'utilisateur choisira (pendingChoice).
+		Les dossiers sont ignorés.
+		inFiles   : fichiers
+		inPhoneId : téléphone ; null pour le choisir
+	*/
+	fun sendFiles(
+		inFiles   : List<File>,
+		inPhoneId : String? = null
+	)
+	{
+		val vFiles     = inFiles.filter { it.isFile }													// fichiers seulement
+		if (vFiles.isEmpty()) return
+		val vConnected = link.state.value.let { vState -> vState.phones.filter { it.id in vState.connected } }	// téléphones reliés
+		val vTarget    = when
+		{
+			inPhoneId != null    -> vConnected.firstOrNull { it.id == inPhoneId }
+			vConnected.size == 1 -> vConnected.single()
+			else                 -> null
+		}																									// destinataire
+		if (vTarget == null)
+		{
+			if (vConnected.isEmpty()) notify("Aucun téléphone relié", "Les fichiers ne sont pas partis : le téléphone doit être sur le Wi-Fi de la maison.")
+			else fChoice.value = vFiles
+			return
+		}
+		fChoice.value = null
+		files.send(vTarget.id, vTarget.label, vFiles.map(::DiskSource)).forEachIndexed { vIndex, vTransfer -> fSources[vTransfer.id] = vFiles[vIndex].absolutePath }
+	}
+
+	/*
+		Abandonne le choix du téléphone (fichiers non envoyés).
+	*/
+	fun cancelChoice()
+	{
+		fChoice.value = null
+	}
+
+	/*
+		Commande transmise par une seconde instance de BridgePlus : lien d'un
+		bouton de notification (« bridgeplus:ouvrir?id=… »), ou fichier du
+		menu de l'Explorateur. Un lien n'agit que sur un élément de
+		l'historique : son identifiant, tiré au hasard, est vérifié.
+		inCommand : commande (« lien <adresse> », « envoyer <chemin> »)
+	*/
+	fun command(inCommand: String)
+	{
+		val vVerb = inCommand.substringBefore(' ')													// nature
+		val vArg  = inCommand.substringAfter(' ', "")												// argument
+		when (vVerb)
+		{
+			"envoyer" -> sendFiles(listOf(File(vArg)))
+			"lien"    ->
+			{
+				val vAction = vArg.removePrefix("bridgeplus:").substringBefore('?')					// action
+				val vId     = vArg.substringAfter("id=", "").let { java.net.URLDecoder.decode(it, Charsets.UTF_8) }	// élément
+				val vFile   = history.items.value.firstOrNull { it.id == vId && it.isFile }?.location?.let(::File) ?: return	// fichier
+				if (vAction == "ouvrir") openFile(vFile) else showInFolder(vFile)
+			}
+		}
+	}
+
+	/*
+		Ouvre un fichier avec l'appli associée de Windows.
+		inFile : fichier
+	*/
+	fun openFile(inFile: File)
+	{
+		fScope.launch { runCatching { java.awt.Desktop.getDesktop().open(inFile) } }
+	}
+
+	/*
+		Montre un fichier dans l'Explorateur, sélectionné.
+		inFile : fichier
+	*/
+	fun showInFolder(inFile: File)
+	{
+		fScope.launch {
+			runCatching { ProcessBuilder("explorer.exe", "/select,", inFile.absolutePath).start() }
+				.onFailure { runCatching { java.awt.Desktop.getDesktop().open(inFile.parentFile) } }
+		}
+	}
+
+	/*
+		Logo (PNG) des notifications de Windows, écrit dans le dossier des
+		données.
+	*/
+	private fun writeIcon(): File =
+		File(fDir, "bridgeplus.png").apply {
+			parentFile.mkdirs()
+			writeBytes(Image.makeFromBitmap(logoImage(256).asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+		}
+
+	/*
+		Notification native de Windows (sinon celle de la zone de
+		notification).
+		inTitle   : titre
+		inBody    : texte
+		inActions : boutons
+	*/
+	fun notify(
+		inTitle   : String,
+		inBody    : String,
+		inActions : List<ToastAction> = emptyList()
+	)
+	{
+		fScope.launch { if (!WinToast.show(inTitle, inBody, inActions.firstOrNull()?.link, inActions)) fNotices.tryEmit("$inTitle : $inBody") }
+	}
+
+	/*
+		Transfert terminé : un fichier reçu va dans l'historique et se signale
+		par une notification avec « Ouvrir » et « Ouvrir le dossier » ; un
+		envoi réussi va dans l'historique sans bruit ; un échec se signale.
+		inTransfer : transfert
+	*/
+	private fun transferFinished(inTransfer: Transfer)
+	{
+		val vSource = fSources.remove(inTransfer.id)													// chemin du fichier envoyé
+		when (inTransfer.state)
+		{
+			TransferState.Done      ->
+			{
+				val vItem = history.addFile(inTransfer.name, inTransfer.size, inTransfer.outgoing, listOf(inTransfer.peer), if (inTransfer.outgoing) vSource.orEmpty() else inTransfer.location)	// élément de l'historique
+				if (!inTransfer.outgoing) notify(
+					"Fichier reçu de ${inTransfer.peer}",
+					"${inTransfer.name} · ${sizeText(inTransfer.size)}",
+					listOf(ToastAction("Ouvrir", WinToast.link("ouvrir", vItem.id)), ToastAction("Ouvrir le dossier", WinToast.link("dossier", vItem.id)))
+				)
+			}
+			TransferState.Failed    -> notify(if (inTransfer.outgoing) "Envoi à ${inTransfer.peer} échoué" else "Réception de ${inTransfer.peer} échouée", "${inTransfer.name} : ${inTransfer.reason.orEmpty()}")
+			else                    -> Unit
+		}
 	}
 
 	/*
@@ -266,6 +450,7 @@ class DesktopApp(
 	*/
 	fun stop()
 	{
+		WinToast.stop()
 		fScope.cancel()
 		link.stop()
 	}

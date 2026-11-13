@@ -29,7 +29,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -313,4 +316,64 @@ fun ClearHistoryDialog(
 		inOnDismiss = inOnDismiss,
 		inOnConfirm = inOnClear
 	)
+}
+
+/*
+	Barre d'avancement fine, à la manière de KeePlus : piste `rule`, partie
+	faite en `text` ; lue par les lecteurs d'écran comme une progression.
+	inProgress : avancement, de 0 à 1
+	inModifier : modificateur
+*/
+@Composable
+fun ProgressLine(
+	inProgress : Float,
+	inModifier : Modifier = Modifier
+)
+{
+	Box(
+		inModifier
+			.fillMaxWidth()
+			.height(4.dp)
+			.clip(RoundedCornerShape(2.dp))
+			.background(BridgeColors.rule)
+			.semantics { progressBarRangeInfo = ProgressBarRangeInfo(inProgress, 0f..1f) }
+	) {
+		Box(Modifier.fillMaxWidth(inProgress.coerceIn(0f, 1f)).height(4.dp).background(BridgeColors.text))
+	}
+}
+
+/*
+	Ligne d'un transfert : sens, nom, détail (appareil, avancement, raison
+	d'un échec), barre d'avancement pendant le transfert, et les actions
+	(annuler, ouvrir…).
+	inOutgoing : vrai pour un envoi
+	inName     : nom du fichier
+	inDetail   : détail en clair
+	inProgress : avancement de 0 à 1 ; null quand le transfert est terminé
+	inFailed   : échec (détail en rouge sourd)
+	inActions  : actions à droite
+*/
+@Composable
+fun TransferRow(
+	inOutgoing : Boolean,
+	inName     : String,
+	inDetail   : String,
+	inProgress : Float?,
+	inFailed   : Boolean,
+	inActions  : @Composable () -> Unit
+)
+{
+	val vType = bridgeType()																	// styles de texte
+	Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+		Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(BridgeColors.surfaceHigh), contentAlignment = Alignment.Center) {
+			Icon(if (inOutgoing) LineIcons.Sent else LineIcons.Received, contentDescription = if (inOutgoing) "Envoi" else "Réception", tint = BridgeColors.textMuted, modifier = Modifier.size(18.dp))
+		}
+		Spacer(Modifier.width(12.dp))
+		Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+			OneLine(inName, vType.body)
+			OneLine(inDetail, vType.bodySmall.copy(color = if (inFailed) BridgeColors.danger else BridgeColors.textMuted))
+			if (inProgress != null) ProgressLine(inProgress)
+		}
+		inActions()
+	}
 }

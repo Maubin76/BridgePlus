@@ -51,6 +51,15 @@ Un contenu marqué sensible n'est **jamais lu** : sur le PC, les marques
 `CanUploadToCloudClipboard` à 0, `Clipboard Viewer Ignore`) sont vérifiées avant le texte ; sur
 Android, `ClipDescription.EXTRA_IS_SENSITIVE`. Aucun texte échangé n'est écrit dans un journal.
 
+Les **fichiers** passent dans les mêmes trames : une proposition (nom, taille), la réponse du
+destinataire (espace disque), des morceaux binaires de 1 Mo scellés comme le reste, puis l'empreinte
+SHA-256 calculée en route, que le destinataire vérifie avant de ranger le fichier. Le nom reçu est
+nettoyé (aucun chemin, aucun caractère interdit, aucun nom réservé de Windows) : un appareil ne peut
+pas écrire hors du dossier de réception.
+
+Les boutons des notifications de Windows lancent un lien `bridgeplus:` qui ne porte qu'un
+identifiant tiré au hasard, jamais un chemin : une page web qui tenterait ce lien ne peut rien ouvrir.
+
 **En clair sur le réseau** : seulement la présentation (`hello`, nom et version de l'appareil, pour le diagnostic) et les refus (`error`). Rien d'autre.
 
 ## Battement de cœur

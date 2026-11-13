@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import fr.maubin.bridgeplus.peers.PhoneLinkState
 import fr.maubin.bridgeplus.ui.components.IconAction
+import fr.maubin.bridgeplus.ui.components.TextLink
 import fr.maubin.bridgeplus.ui.icons.LineIcons
 import fr.maubin.bridgeplus.ui.screens.OnOffSetting
 import fr.maubin.bridgeplus.ui.screens.SettingsDivider
@@ -58,6 +59,10 @@ fun SettingsScreen(
 			OnOffSetting("Du téléphone vers le PC", "Quand BridgePlus est ouvert, chaque copie part vers le PC. Ailleurs, Android l'interdit : utilisez la tuile ou le menu de partage « Envoyer au PC ». Les contenus marqués sensibles ne partent jamais.", vSettings.clipSend) { vOn ->
 				vContext.bridgeApp.updateSettings { it.copy(clipSend = vOn) }
 			}
+		}
+		SettingsSection("Fichiers reçus") {
+			BasicText("Les fichiers envoyés par le PC arrivent dans Téléchargements › $kReceiveFolder ; les photos et vidéos apparaissent aussi dans la galerie.", style = vType.bodySmall)
+			TextLink("Ouvrir le dossier", { openDownloads(vContext) })
 		}
 		SettingsSection("Réseau de la maison") {
 			BasicText("BridgePlus ne fonctionne que sur ces Wi-Fi, appris lors de l'appairage. Ailleurs, il se met en veille.", style = vType.bodySmall)

@@ -241,6 +241,7 @@ fun HistoryWindow(
 				}
 			})
 			hideFromTaskbar(window)
+			acceptDroppedFiles(window, inApp)
 			WindowFront.bring(window)
 			vSlide.animateTo(0f, if (vAnimate) spring(dampingRatio = 0.8f, stiffness = 380f) else snap())
 		}

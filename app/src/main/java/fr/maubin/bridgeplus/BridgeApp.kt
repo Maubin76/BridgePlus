@@ -11,22 +11,33 @@ import fr.maubin.bridgeplus.clip.clipMessage
 import fr.maubin.bridgeplus.history.ClipHistory
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.discoverPcs
+import fr.maubin.bridgeplus.peers.PairedPc
 import fr.maubin.bridgeplus.peers.PhoneLink
 import fr.maubin.bridgeplus.settings.BridgeSettings
 import fr.maubin.bridgeplus.settings.SettingsStore
 import fr.maubin.bridgeplus.store.SealedFile
+import fr.maubin.bridgeplus.transfer.FileTransfers
+import fr.maubin.bridgeplus.transfer.Transfer
+import fr.maubin.bridgeplus.transfer.TransferState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 const val kChannelLink = "liaison"													// canal de la notification du service (discrète)
 
 /*
-	Appli Android : une seule liaison et un seul relais du presse-papiers
-	pour toute l'appli (écrans, service, tuile, partage), créés à la première
-	demande. Crée les canaux de notification et inscrit l'écoute du retour
+	Appli Android : une seule liaison, un seul relais du presse-papiers et un
+	seul moteur des transferts pour toute l'appli (écrans, service, tuile,
+	partage), créés à la première demande. Pendant un transfert, le
+	téléphone et le Wi-Fi restent éveillés et une notification montre la
+	progression. Crée les canaux de notification et inscrit l'écoute du retour
 	sur un Wi-Fi.
 */
 class BridgeApp : Application()
@@ -36,9 +47,13 @@ class BridgeApp : Application()
 	@Volatile private var fWaiting : String? = null											// texte reçu qu'Android n'a pas laissé copier
 	private val fSender   = Executors.newSingleThreadExecutor { inTask -> Thread(inTask, "BridgePlus-envoi").apply { isDaemon = true } }	// envois (hors du fil de l'écran)
 
+	private val fScope    = CoroutineScope(SupervisorJob() + Dispatchers.Default)			// suivi des transferts
+	private val fSources  = ConcurrentHashMap<String, String>()								// adresses des fichiers envoyés, par transfert
+
 	/*
 		Liaison du téléphone (fichier des appareils scellé par le Keystore) ;
-		les textes reçus vont au relais du presse-papiers.
+		les textes reçus vont au relais du presse-papiers, les fichiers aux
+		transferts.
 	*/
 	val link: PhoneLink by lazy {
 		PhoneLink(
@@ -46,9 +61,16 @@ class BridgeApp : Application()
 			fName      = phoneName(this),
 			fVersion   = BuildConfig.VERSION_NAME,
 			fDiscover  = { discoverPcs() },
-			fOnMessage = { vPc, vMessage -> if (vMessage is LinkMessage.Clip) received(vPc.label, vMessage) }
+			fOnMessage = { vPc, vMessage -> if (vMessage is LinkMessage.Clip) received(vPc.label, vMessage) else files.onMessage(vPc.id, vPc.label, vMessage) },
+			fOnChunk   = { vPc, vChunk -> files.onChunk(vPc.id, vChunk) },
+			fOnClosed  = { vPc -> files.onDisconnected(vPc.id) }
 		)
 	}
+
+	/*
+		Transferts de fichiers avec les PC ; réception dans Download/BridgePlus.
+	*/
+	val files: FileTransfers by lazy { FileTransfers({ vId, vMessage -> link.send(vId, vMessage) }, { vId, vChunk -> link.sendChunk(vId, vChunk) }, MediaStoreSink(this), ::transferFinished) }
 
 	/*
 		Relais du presse-papiers : envoi aux PC reliés, textes reçus placés
@@ -77,12 +99,56 @@ class BridgeApp : Application()
 				}
 			)
 			vManager.createNotificationChannel(
+				NotificationChannel(kChannelTransfers, "Fichiers", NotificationManager.IMPORTANCE_LOW).apply {
+					description = "Progression des fichiers envoyés ou reçus, et fichiers arrivés."
+				}
+			)
+			vManager.createNotificationChannel(
 				NotificationChannel(kChannelClips, "Textes reçus", NotificationManager.IMPORTANCE_DEFAULT).apply {
 					description = "Texte reçu du PC qu'Android n'a pas laissé copier : touchez « Copier »."
 				}
 			)
 		}
 		NetworkWatch.register(this)
+		val vLocks = TransferWakeLocks(this)															// verrous d'éveil
+		fScope.launch {
+			files.transfers.collect { vAll ->
+				val vActive = vAll.filter { it.active }.sortedBy { it.at }								// transferts en cours
+				vLocks.hold(vActive.isNotEmpty())
+				showProgress(this@BridgeApp, vActive)
+			}
+		}
+	}
+
+	/*
+		PC reliés en ce moment (destinataires possibles d'un fichier).
+	*/
+	fun connectedPcs(): List<PairedPc> = link.state.value.connected
+
+	/*
+		Envoie des fichiers à un PC relié ; ils partent l'un après l'autre,
+		portés par le service (l'écran peut se fermer).
+		inPc      : PC
+		inSources : fichiers ouverts
+	*/
+	fun sendFiles(
+		inPc      : PairedPc,
+		inSources : List<OpenedSource>
+	)
+	{
+		files.send(inPc.id, inPc.label, inSources).forEachIndexed { vIndex, vTransfer -> fSources[vTransfer.id] = inSources[vIndex].uri }
+	}
+
+	/*
+		Transfert terminé : un fichier reçu ou envoyé va dans l'historique ;
+		un fichier reçu ou un échec se signale par une notification.
+		inTransfer : transfert
+	*/
+	private fun transferFinished(inTransfer: Transfer)
+	{
+		val vSource = fSources.remove(inTransfer.id)													// adresse du fichier envoyé
+		if (inTransfer.state == TransferState.Done) history.addFile(inTransfer.name, inTransfer.size, inTransfer.outgoing, listOf(inTransfer.peer), if (inTransfer.outgoing) vSource.orEmpty() else inTransfer.location)
+		showFinished(this, inTransfer)
 	}
 
 	/*

@@ -115,7 +115,9 @@ data class PhoneLinkState(
 	fName        : nom du téléphone
 	fVersion     : version de l'appli
 	fDiscover    : recherche des PC sur le réseau local
-	fOnMessage   : message reçu d'un PC (étapes suivantes)
+	fOnMessage   : message reçu d'un PC
+	fOnChunk     : morceau de fichier reçu d'un PC
+	fOnClosed    : session d'un PC fermée (transferts interrompus)
 	fNow         : horloge (ms)
 	fDeadAfterMs : délai sans nouvelles au bout duquel une session est morte
 	fBackoff     : délai progressif d'une boucle (un neuf par PC)
@@ -126,6 +128,8 @@ class PhoneLink(
 	private val fVersion     : String,
 	private val fDiscover    : () -> List<FoundPc>             = { discoverPcs() },
 	private val fOnMessage   : (PairedPc, LinkMessage) -> Unit = { _, _ -> },
+	private val fOnChunk     : (PairedPc, ByteArray) -> Unit   = { _, _ -> },
+	private val fOnClosed    : (PairedPc) -> Unit              = {},
 	private val fNow         : () -> Long                      = System::currentTimeMillis,
 	private val fDeadAfterMs : Long                            = kPhoneDeadAfterMs,
 	private val fBackoff     : () -> Backoff                   = { Backoff() }
@@ -269,6 +273,16 @@ class PhoneLink(
 	): Boolean = fLoops[inId]?.session()?.send(inMessage) ?: false
 
 	/*
+		Envoie un morceau de fichier à un PC relié ; faux s'il ne l'est pas.
+		inId    : PC
+		inChunk : morceau
+	*/
+	fun sendChunk(
+		inId    : String,
+		inChunk : ByteArray
+	): Boolean = fLoops[inId]?.session()?.sendChunk(inChunk) ?: false
+
+	/*
 		Envoie un message à tous les PC reliés ; rend les noms de ceux qui
 		l'ont reçu.
 		inMessage : message
@@ -408,8 +422,14 @@ class PhoneLink(
 			fPeers.pcs.firstOrNull { it.id == inId }?.let { fOnMessage(it, inMessage) }
 		}
 
+		override fun onChunk(inSession: LinkSession, inChunk: ByteArray)
+		{
+			fPeers.pcs.firstOrNull { it.id == inId }?.let { fOnChunk(it, inChunk) }
+		}
+
 		override fun onClosed(inSession: LinkSession, inReason: String)
 		{
+			fPeers.pcs.firstOrNull { it.id == inId }?.let { runCatching { fOnClosed(it) } }
 			fSignals.offer("fermée")
 		}
 

@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
 import fr.maubin.bridgeplus.text.relativeTime
+import fr.maubin.bridgeplus.transfer.sizeText
 import fr.maubin.bridgeplus.ui.components.ClearHistoryDialog
 import fr.maubin.bridgeplus.ui.components.HistoryRow
 import fr.maubin.bridgeplus.ui.components.SearchField
@@ -26,10 +27,10 @@ import kotlinx.coroutines.launch
 
 /*
 	Écran Historique, écran de travail à la manière de KeePlus : recherche
-	(sans majuscules ni accents), puis les textes échangés, épinglés
-	d'abord. Toucher un élément le copie (il ne repart pas vers le PC) ;
-	épingle et croix sur chaque ligne ; « Tout effacer » demande une
-	confirmation. L'historique est chiffré par une clé du Keystore.
+	(sans majuscules ni accents), puis les textes et fichiers échangés,
+	épinglés d'abord. Toucher un texte le copie (il ne repart pas vers le
+	PC), toucher un fichier l'ouvre ; épingle et croix sur chaque ligne ;
+	« Tout effacer » demande une confirmation. L'historique est chiffré par une clé du Keystore.
 	inOnBack : retour à l'accueil
 */
 @Composable
@@ -58,12 +59,15 @@ fun HistoryScreen(inOnBack: () -> Unit)
 			{
 				HistoryRow(
 					inOutgoing = vItem.outgoing,
-					inText     = vItem.preview,
+					inText     = if (vItem.isFile) "${vItem.preview} · ${sizeText(vItem.size)}" else vItem.preview,
 					inPeers    = vItem.peers.joinToString(", ").ifEmpty { "?" },
 					inWhen     = relativeTime(vItem.at, vNow),
 					inPinned   = vItem.pinned,
 					inSelected = false,
-					inOnCopy   = { vApp.copyFromHistory(vItem.id) { Toast.makeText(vContext, it, Toast.LENGTH_SHORT).show() } },
+					inOnCopy   = {
+						if (!vItem.isFile) vApp.copyFromHistory(vItem.id) { Toast.makeText(vContext, it, Toast.LENGTH_SHORT).show() }
+						else if (!openReceived(vContext, vItem.location, vItem.preview)) Toast.makeText(vContext, "Ce fichier n'est plus disponible.", Toast.LENGTH_SHORT).show()
+					},
 					inOnPin    = { vScope.launch(Dispatchers.IO) { vApp.history.pin(vItem.id, !vItem.pinned) } },
 					inOnDelete = { vScope.launch(Dispatchers.IO) { vApp.history.delete(vItem.id) } }
 				)

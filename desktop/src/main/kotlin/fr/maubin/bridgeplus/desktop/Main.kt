@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,10 +48,11 @@ import fr.maubin.bridgeplus.ui.screens.WorkScreen
 import fr.maubin.bridgeplus.ui.theme.BridgeBrand
 import fr.maubin.bridgeplus.ui.theme.BridgeColors
 import fr.maubin.bridgeplus.ui.theme.BridgePlusTheme
-import fr.maubin.bridgeplus.ui.theme.logoImage
 import fr.maubin.bridgeplus.ui.theme.bridgeType
+import fr.maubin.bridgeplus.ui.theme.logoImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.Dimension
@@ -62,7 +64,8 @@ import kotlin.system.exitProcess
 enum class PcPage(val label: String, val icon: ImageVector)
 {
 	Devices("Appareils", LineIcons.Devices),												// téléphones, appairage
-	Settings("Réglages", LineIcons.Settings)												// démarrage, réseaux, à propos
+	Transfers("Transferts", LineIcons.Transfers),											// envoi de fichiers, réception
+	Settings("Réglages", LineIcons.Settings)												// presse-papiers, historique, démarrage, réseaux
 }
 
 /*
@@ -72,14 +75,20 @@ enum class PcPage(val label: String, val icon: ImageVector)
 	cache seulement, « Quitter » la ferme vraiment. Lancée avec Windows
 	(--demarrage), elle reste cachée. Le démarrage avec Windows est inscrit
 	au premier lancement de l'appli installée, sauf s'il a été désactivé.
+	Lancée par un bouton de notification (--lien bridgeplus:…) ou par le menu
+	de l'Explorateur (--envoyer fichier), elle transmet la demande à
+	l'instance déjà ouverte, ou la traite elle-même après son démarrage.
 */
 fun main(inArgs: Array<String>)
 {
 	val vStartup  = inArgs.contains(kStartupArg)												// lancé avec Windows : fenêtre cachée
+	val vCommand  = argAfter(inArgs, kLinkArg)?.let { "lien $it" } ?: argAfter(inArgs, ExplorerMenu.kSendArg)?.let { "envoyer $it" }	// demande transmise
 	val vInstance = SingleInstance()															// une seule appli à la fois
-	if (!vInstance.claim(inNotify = !vStartup)) exitProcess(0)
+	if (!vInstance.claim(inNotify = !vStartup && vCommand == null, inCommand = vCommand)) exitProcess(0)
 	val vApp      = DesktopApp().also { it.start() }											// appli
+	vCommand?.let(vApp::command)
 	application {
+		val vScope    = rememberCoroutineScope()														// boîtes de dialogue
 		val vState    by vApp.link.state.collectAsState()											// état de la liaison
 		val vSettings by vApp.settings.collectAsState()											// réglages
 		val vLook     = pcLook(vState)																// état en clair
@@ -95,6 +104,9 @@ fun main(inArgs: Array<String>)
 		var vCard     by remember { mutableStateOf<CardRequest?>(null) }						// carte de l'historique affichée ; null sans
 		var vSerial   by remember { mutableIntStateOf(0) }											// numéro de la dernière demande
 		LaunchedEffect(Unit) { vApp.hotkeyPresses.collect { vSerial++; vCard = CardRequest(it, vSerial) } }
+		LaunchedEffect(Unit) { vInstance.commands.collect { vApp.command(it) } }
+		val vChoice   by vApp.pendingChoice.collectAsState()										// fichiers en attente du choix du téléphone
+		LaunchedEffect(vChoice) { if (vChoice != null) vVisible = true }
 		CompositionLocalProvider(LocalAnimationsEnabled provides remember { SystemPrefs.animationsEnabled() }) {
 			HistoryWindow(
 				inRequest  = vCard,
@@ -114,6 +126,7 @@ fun main(inArgs: Array<String>)
 			menu     = {
 				Item("Ouvrir BridgePlus", onClick = { vVisible = true })
 				Item("Historique du presse-papiers", onClick = { vSerial++; vCard = CardRequest(ActiveWindow(null, null), vSerial) })
+				Item("Envoyer un fichier…", onClick = { vScope.launch { chooseFiles()?.let { vApp.sendFiles(it) } } })
 				Item("Appairer un téléphone", onClick = { vPage = PcPage.Devices; vVisible = true; vApp.background { startPairing() } })
 				Item("Réglages", onClick = { vPage = PcPage.Settings; vVisible = true })
 				Separator()
@@ -136,6 +149,7 @@ fun main(inArgs: Array<String>)
 			icon           = vLogo
 		) {
 			window.minimumSize = Dimension(640, 560)
+			LaunchedEffect(Unit) { acceptDroppedFiles(window, vApp) }
 			BridgePlusTheme {
 				LaunchedEffect(Unit) { TitleBar.apply(window, BridgeColors.void, BridgeColors.text, true) }
 				LaunchedEffect(vVisible, vShow) {
@@ -147,6 +161,7 @@ fun main(inArgs: Array<String>)
 				val vAnimations = remember { SystemPrefs.animationsEnabled() }						// animations de Windows
 				CompositionLocalProvider(LocalAnimationsEnabled provides vAnimations) {
 					PcWindow(vApp, vPage) { vPage = it }
+					vChoice?.let { vFiles -> PhoneChoiceDialog(vApp, vFiles) }
 				}
 			}
 		}
@@ -179,8 +194,9 @@ fun PcWindow(
 			WorkScreen(inPage.label, null) {
 				when (inPage)
 				{
-					PcPage.Devices  -> DevicesPanel(inApp)
-					PcPage.Settings -> SettingsPanel(inApp)
+					PcPage.Devices   -> DevicesPanel(inApp)
+					PcPage.Transfers -> TransfersPanel(inApp)
+					PcPage.Settings  -> SettingsPanel(inApp)
 				}
 			}
 		}

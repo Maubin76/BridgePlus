@@ -26,9 +26,15 @@ import fr.maubin.bridgeplus.peers.PcLink
 import fr.maubin.bridgeplus.peers.PcStatus
 import fr.maubin.bridgeplus.peers.PhoneLink
 import fr.maubin.bridgeplus.settings.BridgeSettings
+import fr.maubin.bridgeplus.transfer.DiskSource
+import fr.maubin.bridgeplus.transfer.FileTransfers
+import fr.maubin.bridgeplus.transfer.FolderSink
+import fr.maubin.bridgeplus.transfer.Transfer
+import fr.maubin.bridgeplus.transfer.TransferState
 import fr.maubin.bridgeplus.store.KeyBox
 import fr.maubin.bridgeplus.store.SealedFile
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -45,12 +51,14 @@ import java.net.Socket
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 /*
 	Sessions sur la boucle locale de la machine (sans réseau réel) :
 	ouverture, battement de cœur, ordre des trames, appairage par QR code,
 	reconnexion, oubli d'un appareil, plusieurs téléphones et plusieurs PC,
-	écoute limitée aux adresses données.
+	presse-papiers, texte et fichiers de 50 Mo dans les deux sens, écoute
+	limitée aux adresses données.
 */
 class SessionTest
 {
@@ -270,6 +278,53 @@ class SessionTest
 		val vBig = "x".repeat(kMaxClipBytes)														// 1 Mo
 		assertEquals(ClipOutcome.Sent, vPcRelay.offer(vBig, false).outcome)
 		assertEquals(vBig, vPhoneBoard.poll(10, TimeUnit.SECONDS))
+	}
+
+	/*
+		Intégration : à travers de vraies sessions chiffrées sur la boucle
+		locale, un texte et un fichier de 50 Mo dans chaque sens ; les deux
+		fichiers arrivent intacts (empreinte vérifiée), sous leur nom.
+	*/
+	@Test
+	fun textAndFiftyMegabytesBothWays()
+	{
+		val vPcInbox    = fTemp.newFolder("reception-pc")												// réception du PC
+		val vPhoneInbox = fTemp.newFolder("reception-telephone")										// réception du téléphone
+		val vDone       = LinkedBlockingQueue<Transfer>()												// transferts terminés
+		val vPcBoard    = LinkedBlockingQueue<String>()													// presse-papiers du PC
+		val vPhoneBoard = LinkedBlockingQueue<String>()													// presse-papiers du téléphone
+		var vPcFiles    : FileTransfers? = null															// transferts du PC
+		var vPhoneFiles : FileTransfers? = null															// transferts du téléphone
+		val vPc    = PcLink(SealedFile(fTemp.root.resolve("pc.json"), KeyBox(kBoxKey)), "PC du séjour", "1.0", { kHome },
+			fOnMessage = { vFrom, vMessage -> if (vMessage is LinkMessage.Clip) vPcBoard.add(vMessage.text) else vPcFiles?.onMessage(vFrom.id, vFrom.label, vMessage) },
+			fOnChunk   = { vFrom, vChunk -> vPcFiles?.onChunk(vFrom.id, vChunk) },
+			fPort = freePort(), fBeacon = 0, fPingEveryMs = 200, fDeadAfterMs = 5_000).also { fStops += it::stop }	// liaison du PC
+		val vPhone = PhoneLink(SealedFile(fTemp.root.resolve("tel.json"), KeyBox(kBoxKey)), "Pixel", "1.0", { emptyList() },
+			fOnMessage = { vFrom, vMessage -> if (vMessage is LinkMessage.Clip) vPhoneBoard.add(vMessage.text) else vPhoneFiles?.onMessage(vFrom.id, vFrom.label, vMessage) },
+			fOnChunk   = { vFrom, vChunk -> vPhoneFiles?.onChunk(vFrom.id, vChunk) },
+			fDeadAfterMs = 5_000, fBackoff = { Backoff(50, 300, 0.0) }).also { fStops += it::stop }	// liaison du téléphone
+		vPcFiles    = FileTransfers(vPc::send, vPc::sendChunk, FolderSink { vPcInbox }, { vDone.add(it) })
+		vPhoneFiles = FileTransfers(vPhone::send, vPhone::sendChunk, FolderSink { vPhoneInbox }, { vDone.add(it) })
+		vPc.startPairing()
+		val vOffer = vPc.state.value.offer!!															// offre
+		assertNull(vPhone.pair(vOffer, kWifi))
+		vPhone.start()
+		awaitTrue { vPhone.state.value.statusOf(vOffer.pcId) == PcStatus.Connected && vPc.state.value.connected.isNotEmpty() }
+		val vPhoneId = vPhone.info().id																	// identifiant du téléphone
+
+		assertEquals(listOf("Pixel"), vPc.sendAll(LinkMessage.Clip("1", "texte du PC", 0)))
+		assertEquals(listOf("PC du séjour"), vPhone.sendAll(LinkMessage.Clip("2", "texte du téléphone", 0)))
+		assertEquals("texte du PC", vPhoneBoard.poll(5, TimeUnit.SECONDS))
+		assertEquals("texte du téléphone", vPcBoard.poll(5, TimeUnit.SECONDS))
+
+		val vFromPhone = fTemp.newFolder().resolve("video.mp4").apply { writeBytes(Random(1).nextBytes(50 * 1024 * 1024)) }	// 50 Mo du téléphone
+		val vFromPc    = fTemp.newFolder().resolve("archive.zip").apply { writeBytes(Random(2).nextBytes(50 * 1024 * 1024)) }	// 50 Mo du PC
+		vPhoneFiles.send(vOffer.pcId, "PC du séjour", listOf(DiskSource(vFromPhone)))
+		vPcFiles.send(vPhoneId, "Pixel", listOf(DiskSource(vFromPc)))
+		val vEnds = List(4) { vDone.poll(60, TimeUnit.SECONDS) ?: throw AssertionError("transfert jamais terminé") }	// quatre fins
+		assertTrue(vEnds.joinToString { "${it.name} ${it.state} ${it.reason}" }, vEnds.all { it.state == TransferState.Done })
+		assertArrayEquals(vFromPhone.readBytes(), vPcInbox.resolve("video.mp4").readBytes())
+		assertArrayEquals(vFromPc.readBytes(), vPhoneInbox.resolve("archive.zip").readBytes())
 	}
 
 	/*

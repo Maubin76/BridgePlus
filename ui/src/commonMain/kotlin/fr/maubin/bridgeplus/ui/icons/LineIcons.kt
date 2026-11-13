@@ -325,4 +325,11 @@ object LineIcons
 		"M4 4.5 V8 H7.5",
 		"M12 8 V12 L15 14"
 	)
+
+	// Transferts : deux flèches opposées, l'une monte, l'autre descend.
+	val Transfers: ImageVector = lineIcon(
+		"Transferts",
+		"M8 19 V5", "M4.5 8.5 L8 5 L11.5 8.5",
+		"M16 5 V19", "M12.5 15.5 L16 19 L19.5 15.5"
+	)
 }
