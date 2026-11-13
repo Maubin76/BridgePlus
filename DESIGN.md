@@ -133,6 +133,9 @@ Un **pont noir** (tablier fin posé sur une arche) surmonté du « + » de la ga
 - **Encadré d'explication** : carte `surface`, icône `text-muted` et une phrase, avec un lien d'action (autorisations, pare-feu).
 - **Icônes** : le jeu au trait de 1,6 de KeePlus, complété des icônes de la liaison (maillons, maison barrée, ordinateur, téléphone, QR code, Wi-Fi).
 
+- **Assistant de premier lancement** : écran clé (décor complet), « Étape 2 sur 5 », titre en deux tons en `display`, une phrase en `body-small`, un seul bouton argent, « Passer » en lien.
+- **Sonnerie** : sur l'accueil, pendant qu'elle sonne, un bouton argent « Arrêter la sonnerie » sous l'état de la liaison.
+
 ## Mise en page
 - **Android** : comme KeePlus, un seul écran principal (l'accueil, avec le décor). Appareils et Réglages sont accessibles par des icônes en haut à droite. Ce sont des écrans de travail avec une flèche de retour, et leurs boutons sont réduits de 20 %.
 - **PC** : une colonne de navigation `void` (marque, Appareils, Réglages), puis la page de travail limitée à 640 dp. La fenêtre se ferme dans la zone de notification.

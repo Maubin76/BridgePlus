@@ -18,7 +18,13 @@
   <img src="https://img.shields.io/badge/chiffrement-AES--256--GCM-555555" alt="Chiffrement AES-256-GCM">
 </p>
 
-<!-- Captures du téléphone et du PC : étape 6. -->
+<!-- Captures : ./gradlew :desktop:test --tests "*PreviewRenderTest*" -Pbridgeplus.captures
+     (rendus hors écran, écrits dans doc/images), puis décommenter :
+<p align="center">
+  <img src="doc/images/telephone-accueil-relie.png" alt="Accueil du téléphone : relié au PC" width="30%">
+  <img src="doc/images/carte-historique.png" alt="Carte de l'historique sur le PC" width="60%">
+</p>
+-->
 
 ## En bref
 
@@ -43,7 +49,7 @@ deux secondes**.
 | 3 | Historique chiffré, carte du PC (Ctrl+Alt+V) | ✅ (branche `develop`) |
 | 4 | Envoi de fichiers dans les deux sens | ✅ (branche `develop`) |
 | 5 | Notifications du téléphone sur le PC | ✅ (branche `develop`) |
-| 6 | Sonnerie, batterie, liens, assistant de premier lancement | à venir |
+| 6 | Sonnerie, batterie, liens, assistant de premier lancement, mises à jour | ✅ (branche `develop`) |
 
 ## Le presse-papiers
 
@@ -100,10 +106,31 @@ appareil (Keystore sur le téléphone, DPAPI sur le PC).
   Infos de l'appli › ⋮ › Autoriser les paramètres restreints, puis Accès aux notifications ›
   BridgePlus. L'appli guide pas à pas.
 
+## Les petits plus
+
+- **Faire sonner le téléphone** depuis le PC (menu de l'icône ou page Appareils), même en
+  silencieux, pour le retrouver dans la maison. « Arrêter » sur le téléphone ; arrêt seul après
+  60 s.
+- **Batterie du téléphone** sur le PC : info-bulle de l'icône, page Appareils, carte de
+  l'historique ; alerte facultative sous 20 %.
+- **Ouvrir un lien sur l'autre appareil** : un lien partagé vers « Envoyer au PC » s'ouvre dans le
+  navigateur du PC ; sur le PC, glissez un lien sur la fenêtre ou « Ouvrir sur le téléphone le lien
+  copié » (une notification à toucher sur le téléphone). Seuls les liens web passent.
+- **Premier lancement** : un assistant court (notifications, Wi-Fi de la maison, arrière-plan,
+  accès aux notifications, appairage), chaque étape facultative.
+- **Sauvegarde des réglages** du téléphone dans un fichier, sans jamais les clés des paires.
+- **Mises à jour** : la dernière version publiée sur GitHub est proposée au lancement (seule
+  requête vers internet, désactivable).
+
+## Consommation
+
+Mesure sur une journée : voir [la marche à suivre et le résultat](doc/BATTERIE.md).
+
 ## Installer
 
 - **Téléphone** : APK de la [dernière version](https://github.com/Maubin76/BridgePlus/releases/latest).
-- **PC** : zip portable de la même page ; dézippez-le où vous voulez et lancez `BridgePlus.exe`.
+- **PC** : installateur `.msi`, ou zip portable de la même page (dézippez-le où vous voulez et
+  lancez `BridgePlus.exe` ; c'est cette version qui se met à jour seule).
   Au premier appairage, Windows demande d'autoriser BridgePlus sur le réseau : cochez seulement
   **Réseaux privés**.
 

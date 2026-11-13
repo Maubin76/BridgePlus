@@ -25,6 +25,7 @@ import fr.maubin.bridgeplus.ui.components.LinkLook
 import fr.maubin.bridgeplus.ui.components.LocalButtonScale
 import fr.maubin.bridgeplus.ui.components.LocalAnimationsEnabled
 import fr.maubin.bridgeplus.ui.theme.BridgePlusTheme
+import fr.maubin.bridgeplus.ui.update.UpdateDialog
 
 /*
 	Écran de l'appli, comme dans KeePlus : l'accueil, et deux écrans de
@@ -98,6 +99,7 @@ class MainActivity : ComponentActivity()
 	{
 		super.onCreate(inState)
 		enableEdgeToEdge()
+		bridgeApp.updates.checkAtLaunch()
 		setContent {
 			val vAnimations = remember { Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }	// animations du système
 			BridgePlusTheme {
@@ -111,6 +113,8 @@ class MainActivity : ComponentActivity()
 	override fun onResume()
 	{
 		super.onResume()
+		visible = true
+		bridgeApp.updates.onResume()
 		NetworkWatch.register(this)
 		LinkService.startIfHome(this)
 		getSystemService(ClipboardManager::class.java)?.addPrimaryClipChangedListener(fClipListener)
@@ -118,6 +122,7 @@ class MainActivity : ComponentActivity()
 
 	override fun onPause()
 	{
+		visible = false
 		getSystemService(ClipboardManager::class.java)?.removePrimaryClipChangedListener(fClipListener)
 		super.onPause()
 	}
@@ -126,6 +131,15 @@ class MainActivity : ComponentActivity()
 	{
 		super.onWindowFocusChanged(inFocus)
 		if (inFocus) sendForeground()
+	}
+
+	companion object
+	{
+		/*
+			Vrai tant que l'appli est à l'écran (un lien du PC s'ouvre alors
+			directement).
+		*/
+		@Volatile var visible: Boolean = false
 	}
 
 	/*
@@ -141,7 +155,8 @@ class MainActivity : ComponentActivity()
 }
 
 /*
-	Appli du téléphone : écran affiché, retour du système vers l'accueil. Le
+	Appli du téléphone : assistant au premier lancement, puis écran affiché,
+	retour du système vers l'accueil ; fenêtre d'une nouvelle version. Le
 	réseau et les autorisations sont relus à chaque retour à l'écran
 	(l'utilisateur a pu les changer dans les réglages d'Android). Les écrans
 	de travail ont des boutons réduits de 20 %, comme dans KeePlus.
@@ -158,6 +173,16 @@ fun PhoneApp()
 	val vNetwork = remember(vResumes, vState) { currentPhoneNetwork(vContext) }						// réseau du téléphone
 	val vOnHome  = remember(vNetwork, vState.home) { vNetwork.wifi?.let { it in vState.home } == true }	// à la maison
 	val vHome    = { vScreen = PhoneScreen.Home }													// retour à l'accueil
+	val vSettings by vContext.bridgeApp.settings.collectAsState()									// réglages
+	if (!vSettings.onboardingDone)
+	{
+		OnboardingScreen(vResumes) { vToDevices ->
+			vContext.bridgeApp.updateSettings { it.copy(onboardingDone = true) }
+			vScreen = if (vToDevices) PhoneScreen.Devices else PhoneScreen.Home
+		}
+		return
+	}
+	vContext.bridgeApp.updates.takeIf { it.state != null }?.let { UpdateDialog(it) }
 	when (vScreen)
 	{
 		PhoneScreen.Home     -> HomeScreen(vState, phoneLook(vState, vNetwork, vOnHome), vResumes) { vScreen = it }

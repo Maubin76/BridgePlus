@@ -1,5 +1,7 @@
 package fr.maubin.bridgeplus
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,12 +12,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import fr.maubin.bridgeplus.peers.PhoneLinkState
+import fr.maubin.bridgeplus.settings.SettingsBackup
+import fr.maubin.bridgeplus.settings.decodeBackup
+import fr.maubin.bridgeplus.settings.encodeBackup
 import fr.maubin.bridgeplus.ui.components.IconAction
 import fr.maubin.bridgeplus.ui.components.TextLink
 import fr.maubin.bridgeplus.ui.icons.LineIcons
@@ -31,7 +39,8 @@ import kotlinx.coroutines.launch
 /*
 	Écran Réglages, écran de travail à la manière de KeePlus : presse-papiers
 	(chaque sens), notifications sur le PC (liste blanche), fichiers reçus,
-	réseaux de la maison (appris à l'appairage, retirables),
+	réseaux de la maison, mises à jour, sauvegarde et restauration des
+	réglages (sans les clés), (appris à l'appairage, retirables),
 	autorisations, à propos.
 	inState   : état de la liaison
 	inNetwork : réseau du téléphone
@@ -52,6 +61,24 @@ fun SettingsScreen(
 	val vScope   = rememberCoroutineScope()															// enregistrement
 	val vType    = bridgeType()																		// styles de texte
 	val vSettings by vContext.bridgeApp.settings.collectAsState()									// réglages
+	var vMessage  by remember { mutableStateOf<String?>(null) }										// résultat d'une sauvegarde, d'une restauration, d'une vérification
+	val vSave     = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { vUri ->
+		vUri ?: return@rememberLauncherForActivityResult
+		vMessage = runCatching {
+			val vBackup = SettingsBackup(settings = vContext.bridgeApp.settings.value, home = vContext.bridgeLink.peers().home)	// sauvegarde
+			vContext.contentResolver.openOutputStream(vUri)?.use { it.write(encodeBackup(vBackup).toByteArray(Charsets.UTF_8)) }
+			"Réglages sauvegardés (sans les clés des paires)."
+		}.getOrElse { "Sauvegarde impossible : ${it.message}" }
+	}																									// choix du fichier de sauvegarde
+	val vLoad     = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { vUri ->
+		vUri ?: return@rememberLauncherForActivityResult
+		val vBackup = runCatching { vContext.contentResolver.openInputStream(vUri)?.use { it.readBytes().toString(Charsets.UTF_8) }?.let(::decodeBackup) }.getOrNull()	// sauvegarde lue
+		vMessage = if (vBackup == null) "Ce fichier n'est pas une sauvegarde de BridgePlus." else {
+			vContext.bridgeApp.updateSettings { vBackup.settings.copy(onboardingDone = true) }
+			vScope.launch(Dispatchers.IO) { vContext.bridgeLink.setHome(vBackup.home) }
+			"Réglages restaurés. Les PC restent à appairer de nouveau s'ils ne le sont pas."
+		}
+	}																									// choix du fichier à restaurer
 	WorkScreen("Réglages", inOnBack) {
 		SettingsSection("Presse-papiers") {
 			OnOffSetting("Du PC vers le téléphone", "Les textes copiés sur le PC sont placés dans le presse-papiers du téléphone.", vSettings.clipReceive) { vOn ->
@@ -94,6 +121,19 @@ fun SettingsScreen(
 			BasicText("Les autorisations utiles sont accordées quand rien n'est proposé ici.", style = vType.bodySmall)
 			MissingPermissions(inResumes)
 		}
+		SettingsSection("Mises à jour") {
+			OnOffSetting("Chercher une nouvelle version au lancement", "Seule requête vers internet de BridgePlus : la dernière version publiée sur GitHub.", vSettings.updates) { vOn ->
+				vContext.bridgeApp.updateSettings { it.copy(updates = vOn) }
+			}
+			TextLink("Vérifier maintenant", { vContext.bridgeApp.updates.checkNow { vMessage = it } })
+		}
+		SettingsSection("Sauvegarde") {
+			BasicText("Les réglages et les réseaux de la maison, dans un fichier que vous choisissez. Jamais les clés des paires : les PC sont à appairer de nouveau sur un autre téléphone.", style = vType.bodySmall)
+			TextLink("Sauvegarder les réglages", { vSave.launch("BridgePlus-reglages.json") })
+			TextLink("Restaurer des réglages", { vLoad.launch(arrayOf("application/json", "text/plain", "*/*")) })
+			TextLink("Revoir l'assistant de premier lancement", { vContext.bridgeApp.updateSettings { it.copy(onboardingDone = false) } })
+		}
+		vMessage?.let { BasicText(it, style = vType.bodySmall) }
 		SettingsSection("À propos") {
 			BasicText("BridgePlus ${BuildConfig.VERSION_NAME}", style = vType.title)
 			BasicText("Tout passe directement par le Wi-Fi de la maison, chiffré avec la clé de chaque paire. Aucun compte, aucun serveur, aucune télémétrie.", style = vType.bodySmall)

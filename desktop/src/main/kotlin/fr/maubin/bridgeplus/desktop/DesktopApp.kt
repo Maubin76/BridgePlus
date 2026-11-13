@@ -3,12 +3,14 @@ package fr.maubin.bridgeplus.desktop
 import androidx.compose.ui.graphics.asSkiaBitmap
 import com.sun.jna.platform.win32.KnownFolders
 import com.sun.jna.platform.win32.Shell32Util
+import fr.maubin.bridgeplus.battery.BatteryAlert
 import fr.maubin.bridgeplus.clip.ClipOutcome
 import fr.maubin.bridgeplus.clip.ClipRelay
 import fr.maubin.bridgeplus.history.ClipHistory
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.LocalNetwork
 import fr.maubin.bridgeplus.link.fromBase64
+import fr.maubin.bridgeplus.link.isWebLink
 import fr.maubin.bridgeplus.link.toBase64
 import fr.maubin.bridgeplus.peers.PcLink
 import fr.maubin.bridgeplus.peers.PcLinkState
@@ -24,6 +26,7 @@ import fr.maubin.bridgeplus.transfer.TransferState
 import fr.maubin.bridgeplus.transfer.sizeText
 import fr.maubin.bridgeplus.ui.components.LinkLook
 import fr.maubin.bridgeplus.ui.theme.logoImage
+import fr.maubin.bridgeplus.ui.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -152,6 +155,18 @@ class DesktopApp(
 	private val fChoice   = MutableStateFlow<List<File>?>(null)							// fichiers en attente du choix du téléphone ; null sans
 	private val fSources  = ConcurrentHashMap<String, String>()							// chemins des fichiers envoyés, par transfert
 	private val fNoticeTags = ConcurrentHashMap<String, Pair<String, String>>()			// notifications du téléphone affichées : étiquette → (téléphone, clé)
+	private val fBattery  = MutableStateFlow<Map<String, LinkMessage.Battery>>(emptyMap())	// batterie de chaque téléphone
+	private val fAlerts   = ConcurrentHashMap<String, BatteryAlert>()						// alerte de batterie faible, par téléphone
+
+	/*
+		Mises à jour de l'appli (GitHub), créées par Main ; null avant.
+	*/
+	var updates: UpdateManager? = null
+
+	/*
+		Batterie de chaque téléphone relié (identifiant → niveau et charge).
+	*/
+	val battery: StateFlow<Map<String, LinkMessage.Battery>> = fBattery
 
 	/*
 		Liaison avec les téléphones ; les textes reçus vont au relais du
@@ -169,11 +184,13 @@ class DesktopApp(
 				is LinkMessage.PhoneNotice   -> showNotice(vPhone.id, vPhone.label, vMessage)
 				is LinkMessage.NoticeRemoved -> noticeTag(vPhone.id, vMessage.key).let { vTag -> fNoticeTags.remove(vTag); WinToast.remove(vTag) }
 				is LinkMessage.AppIcon       -> saveIcon(vMessage)
+				is LinkMessage.Battery       -> batteryReceived(vPhone.id, vPhone.label, vMessage)
+				is LinkMessage.OpenLink      -> if (isWebLink(vMessage.url)) fScope.launch { runCatching { java.awt.Desktop.getDesktop().browse(java.net.URI(vMessage.url.trim())) } }
 				else                         -> files.onMessage(vPhone.id, vPhone.label, vMessage)
 			}
 		},
 		fOnChunk   = { vPhone, vChunk -> files.onChunk(vPhone.id, vChunk) },
-		fOnClosed  = { vPhone -> files.onDisconnected(vPhone.id) }
+		fOnClosed  = { vPhone -> files.onDisconnected(vPhone.id); fBattery.update { it - vPhone.id } }
 	)
 
 	/*
@@ -350,6 +367,44 @@ class DesktopApp(
 			runCatching { ProcessBuilder("explorer.exe", "/select,", inFile.absolutePath).start() }
 				.onFailure { runCatching { java.awt.Desktop.getDesktop().open(inFile.parentFile) } }
 		}
+	}
+
+	/*
+		Fait sonner les téléphones reliés (même en silencieux), ou arrête la
+		sonnerie ; rend leurs noms (vide : aucun téléphone relié).
+		inOn : vrai pour sonner
+	*/
+	fun ring(inOn: Boolean): List<String> = link.sendAll(LinkMessage.Ring(inOn))
+
+	/*
+		Ouvre un lien sur les téléphones reliés (une notification à toucher si
+		BridgePlus n'y est pas affiché). Seuls les liens web partent ; rend
+		le message à montrer.
+		inUrl : lien
+	*/
+	fun sendLink(inUrl: String): String
+	{
+		if (!isWebLink(inUrl)) return "Ce n'est pas un lien web (http ou https)."
+		val vPeers = link.sendAll(LinkMessage.OpenLink(inUrl.trim()))								// téléphones joints
+		return if (vPeers.isEmpty()) "Aucun téléphone relié." else "Lien envoyé à ${vPeers.joinToString(" et ")}."
+	}
+
+	/*
+		Batterie reçue d'un téléphone : retenue, et alerte une fois par
+		décharge sous 20 % si le réglage le demande.
+		inPhoneId : téléphone
+		inPhone   : son nom
+		inBattery : niveau et charge
+	*/
+	private fun batteryReceived(
+		inPhoneId : String,
+		inPhone   : String,
+		inBattery : LinkMessage.Battery
+	)
+	{
+		fBattery.update { it + (inPhoneId to inBattery) }
+		val vAlert = fAlerts.computeIfAbsent(inPhoneId) { BatteryAlert() }.update(inBattery.level, inBattery.charging)	// alerte à donner
+		if (vAlert && fSettings.value.batteryAlert) notify("Batterie faible", "$inPhone : ${inBattery.level} %. Pensez à le recharger.")
 	}
 
 	/*

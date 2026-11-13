@@ -286,6 +286,8 @@ fun HistoryCardContent(
 	val vScope    = rememberCoroutineScope()														// lectures et écritures
 	val vList     = rememberLazyListState()															// défilement
 	val vFound    = remember(vItems, vText) { inApp.history.search(vText) }							// éléments affichés
+	val vBattery  by inApp.battery.collectAsState()													// batterie des téléphones
+	val vLink     by inApp.link.state.collectAsState()												// téléphones appairés
 	LaunchedEffect(Unit) { runCatching { vFocus.requestFocus() } }
 	LaunchedEffect(vQuery) { snapshotFlow { vQuery.text.toString() }.collect { vText = it; vSelected = 0 } }
 	LaunchedEffect(vSelected) { if (vFound.isNotEmpty()) vList.animateScrollToItem(vSelected.coerceIn(0, vFound.lastIndex)) }
@@ -318,6 +320,10 @@ fun HistoryCardContent(
 	) {
 		Row(verticalAlignment = Alignment.CenterVertically) {
 			BasicText("Presse-papiers", Modifier.weight(1f), style = vType.bodySmall)
+			vBattery.entries.firstOrNull()?.let { (vId, vLevel) ->
+				val vName = vLink.phones.firstOrNull { it.id == vId }?.label.orEmpty()						// téléphone
+				BasicText("$vName · ${vLevel.level} %${if (vLevel.charging) " ⚡" else ""}   ", style = vType.bodySmall.copy(color = BridgeColors.text))
+			}
 			BasicText("Entrée : copier · Échap : fermer", style = vType.bodySmall.copy(color = BridgeColors.textFaint))
 		}
 		SearchField(vQuery, Modifier.focusRequester(vFocus), "Rechercher dans l'historique")

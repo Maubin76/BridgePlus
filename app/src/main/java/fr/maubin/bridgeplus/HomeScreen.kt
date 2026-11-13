@@ -56,6 +56,7 @@ fun HomeScreen(
 	var vMessage by remember { mutableStateOf<String?>(null) }										// résultat de l'envoi
 	var vNow     by remember { mutableLongStateOf(System.currentTimeMillis()) }						// horloge (« il y a… »)
 	val vFiles   by vContext.bridgeApp.files.transfers.collectAsState()								// transferts
+	val vRinging by Ringer.ringing.collectAsState()													// sonnerie en cours
 	var vChoice  by remember { mutableStateOf<List<OpenedSource>?>(null) }							// fichiers en attente du choix du PC
 	val vPick    = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { vUris ->
 		if (vUris.isEmpty()) return@rememberLauncherForActivityResult
@@ -78,6 +79,7 @@ fun HomeScreen(
 		}
 	) {
 		LinkHero(inLook.look, inLook.muted, inLook.strong, inLook.detail)
+		if (vRinging) SilverButton("Arrêter la sonnerie", { Ringer.stop(vContext) })
 		if (inState.pcs.isEmpty())
 		{
 			SilverButton("Appairer un PC", { inOnScreen(PhoneScreen.Devices) })

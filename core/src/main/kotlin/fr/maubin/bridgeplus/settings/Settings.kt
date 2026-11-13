@@ -1,5 +1,6 @@
 package fr.maubin.bridgeplus.settings
 
+import fr.maubin.bridgeplus.link.NetworkId
 import fr.maubin.bridgeplus.store.writeAtomic
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -18,6 +19,8 @@ private val kSettingsJson = Json { ignoreUnknownKeys = true; encodeDefaults = tr
 	noticesShow       : PC : afficher les notifications du téléphone
 	noticeApps        : téléphone : choix par appli (paquet → envoyée ou non) ; une appli
 	                    absente suit le défaut (messageries oui, le reste non)
+	batteryAlert      : PC : alerte quand la batterie du téléphone passe sous 20 %
+	onboardingDone    : téléphone : assistant de premier lancement vu
 	receiveFolder     : PC : dossier de réception des fichiers ; vide pour Téléchargements\BridgePlus
 	launchAtStartup   : PC : BridgePlus démarre avec Windows
 	firewallExplained : PC : l'explication du pare-feu a été lue
@@ -32,6 +35,8 @@ data class BridgeSettings(
 	val noticesSend       : Boolean = true,
 	val noticesShow       : Boolean = true,
 	val noticeApps        : Map<String, Boolean> = emptyMap(),
+	val batteryAlert      : Boolean = true,
+	val onboardingDone    : Boolean = false,
 	val receiveFolder     : String  = "",
 	val launchAtStartup   : Boolean = true,
 	val firewallExplained : Boolean = false,
@@ -57,3 +62,29 @@ class SettingsStore(private val fFile: File)
 	*/
 	fun save(inSettings: BridgeSettings) = writeAtomic(fFile, kSettingsJson.encodeToString(BridgeSettings.serializer(), inSettings).toByteArray(Charsets.UTF_8))
 }
+
+/*
+	Sauvegarde des réglages du téléphone (fichier choisi par l'utilisateur) :
+	réglages et réseaux de la maison, jamais les clés des paires.
+	format   : version du format
+	settings : réglages
+	home     : réseaux de la maison
+*/
+@Serializable
+data class SettingsBackup(
+	val format   : Int              = 1,
+	val settings : BridgeSettings,
+	val home     : List<NetworkId>  = emptyList()
+)
+
+/*
+	Sauvegarde en texte (JSON lisible).
+	inBackup : sauvegarde
+*/
+fun encodeBackup(inBackup: SettingsBackup): String = kSettingsJson.encodeToString(SettingsBackup.serializer(), inBackup)
+
+/*
+	Sauvegarde lue ; null si le fichier n'en est pas une.
+	inText : contenu du fichier
+*/
+fun decodeBackup(inText: String): SettingsBackup? = runCatching { kSettingsJson.decodeFromString(SettingsBackup.serializer(), inText) }.getOrNull()

@@ -7,7 +7,8 @@
 # - APK release (R8), signé avec la clé des secrets KEYSTORE_BASE64, KEY_ALIAS
 #   et KEY_PASSWORD. Sans eux : clé jetable de la CI et avertissement (un tel
 #   APK ne peut pas mettre à jour l'appli installée).
-# - Appli PC : dossier portable zippé avec BridgePlus.exe et sa JVM (Windows).
+# - Appli PC : installateur Windows (.msi) et dossier portable zippé avec BridgePlus.exe
+#   et sa JVM (Windows).
 # - Release GitHub « vX.Y » avec les deux fichiers ; ses notes donnent la version du
 #   protocole de liaison (le téléphone et le PC doivent parler le même).
 #
@@ -151,7 +152,7 @@ jobs:
           retention-days: 7
 
   desktop:
-    name: Appli PC (exe)
+    name: Appli PC (zip et msi)
     needs: version
     runs-on: windows-latest
     timeout-minutes: 30
@@ -193,6 +194,19 @@ jobs:
           path: desktop/build/distributions/BridgePlus-*-windows.zip
           retention-days: 7
 
+      - name: Construire l'installateur Windows (.msi)
+        shell: bash
+        run: |
+          ./gradlew :desktop:packageMsi
+          mv desktop/build/compose/binaries/main/msi/*.msi "BridgePlus-${{ needs.version.outputs.version }}-windows.msi"
+
+      - name: Garder l'installateur
+        uses: actions/upload-artifact@v7
+        with:
+          name: msi
+          path: BridgePlus-*-windows.msi
+          retention-days: 7
+
   release:
     name: Release GitHub
     needs: [version, android, desktop]
@@ -208,7 +222,7 @@ jobs:
           ref: ${{ needs.version.outputs.sha }}
           fetch-depth: 0
 
-      - name: Récupérer l'APK et le zip
+      - name: Récupérer l'APK, le zip et l'installateur
         uses: actions/download-artifact@v7
         with:
           path: fichiers
@@ -221,7 +235,7 @@ jobs:
           SHA: ${{ needs.version.outputs.sha }}
         run: |
           vProtocol=$(sed -n 's/.*kLinkProtocol *= *\([0-9][0-9]*\).*/\1/p' core/src/main/kotlin/fr/maubin/bridgeplus/link/LinkProtocol.kt)
-          printf '%s\n\n%s\n' "Protocole de liaison : $vProtocol" "Version $VERSION : APK Android et appli PC portable (dézipper, lancer BridgePlus.exe)." > notes.md
+          printf '%s\n\n%s\n' "Protocole de liaison : $vProtocol" "Version $VERSION : APK Android, installateur Windows (.msi) et appli PC portable (dézipper, lancer BridgePlus.exe)." > notes.md
           gh release create "v$VERSION" fichiers/* \
             --repo "${{ github.repository }}" \
             --target "$SHA" \

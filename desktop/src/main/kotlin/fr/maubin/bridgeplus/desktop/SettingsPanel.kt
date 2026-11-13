@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import fr.maubin.bridgeplus.ui.components.ClearHistoryDialog
 import fr.maubin.bridgeplus.ui.components.FilterPill
 import fr.maubin.bridgeplus.ui.components.GhostButton
+import fr.maubin.bridgeplus.ui.components.TextLink
 import fr.maubin.bridgeplus.ui.screens.ErrorLine
 import fr.maubin.bridgeplus.ui.screens.OnOffSetting
 import fr.maubin.bridgeplus.ui.screens.SettingsDivider
@@ -46,10 +47,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /*
-	Page Réglages du PC : presse-papiers (chaque sens), notifications du
-	téléphone, historique
+	Page Réglages du PC : presse-papiers (chaque sens), téléphone (batterie,
+	notifications), historique
 	(raccourci de la carte, « Tout effacer »), démarrage avec Windows,
-	réseaux de la maison, à propos.
+	réseaux de la maison, mises à jour, à propos.
 	inApp : appli PC
 */
 @OptIn(ExperimentalLayoutApi::class)
@@ -62,6 +63,7 @@ fun SettingsPanel(inApp: DesktopApp)
 	var vStartErr by remember { mutableStateOf<String?>(null) }								// échec du réglage du démarrage
 	val vHotkeyOk by inApp.hotkeyOk.collectAsState()											// raccourci accepté par Windows
 	var vClear    by remember { mutableStateOf(false) }											// confirmation de « Tout effacer »
+	var vUpdateMessage by remember { mutableStateOf<String?>(null) }							// résultat de « Vérifier maintenant »
 	val vScope    = rememberCoroutineScope()														// effacement
 	Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
 		SettingsSection("Presse-papiers") {
@@ -73,7 +75,11 @@ fun SettingsPanel(inApp: DesktopApp)
 				inApp.updateSettings { it.copy(clipReceive = vOn) }
 			}
 		}
-		SettingsSection("Notifications du téléphone") {
+		SettingsSection("Téléphone") {
+			OnOffSetting("Alerte de batterie faible", "Une notification quand la batterie du téléphone passe sous 20 %, une fois par décharge.", vSettings.batteryAlert) { vOn ->
+				inApp.updateSettings { it.copy(batteryAlert = vOn) }
+			}
+			SettingsDivider()
 			OnOffSetting("Afficher les notifications du téléphone", "Les applis choisies sur le téléphone (les messageries par défaut) s'affichent ici en notifications de Windows, qui respectent « Ne pas déranger ». Les fermer ici les masque sur le téléphone. Rien n'est enregistré.", vSettings.noticesShow) { vOn ->
 				inApp.updateSettings { it.copy(noticesShow = vOn) }
 			}
@@ -103,6 +109,13 @@ fun SettingsPanel(inApp: DesktopApp)
 					FilterPill("+ ${vNetwork.label}", false) { inApp.background { setHome(vNetwork, true) } }
 				}
 			}
+		}
+		SettingsSection("Mises à jour") {
+			OnOffSetting("Chercher une nouvelle version au lancement", "Seule requête vers internet de BridgePlus : la dernière version publiée sur GitHub.", vSettings.updates) { vOn ->
+				inApp.updateSettings { it.copy(updates = vOn) }
+			}
+			inApp.updates?.let { vUpdates -> TextLink("Vérifier maintenant", { vUpdates.checkNow { vUpdateMessage = it } }) }
+			vUpdateMessage?.let { BasicText(it, style = vType.bodySmall) }
 		}
 		SettingsSection("À propos") {
 			BasicText("BridgePlus ${appVersion() ?: "(développement)"}", style = vType.title)

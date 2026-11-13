@@ -31,6 +31,7 @@ import fr.maubin.bridgeplus.ui.components.LinkHero
 import fr.maubin.bridgeplus.ui.components.LinkLook
 import fr.maubin.bridgeplus.ui.components.RenameDialog
 import fr.maubin.bridgeplus.ui.components.SilverButton
+import fr.maubin.bridgeplus.ui.components.TextLink
 import fr.maubin.bridgeplus.ui.icons.LineIcons
 import fr.maubin.bridgeplus.ui.screens.SettingsSection
 import fr.maubin.bridgeplus.ui.theme.BridgeColors
@@ -40,7 +41,8 @@ import kotlinx.coroutines.delay
 /*
 	Page Appareils du PC : état de la liaison en grand (titre en deux tons),
 	explication du pare-feu au premier lancement, téléphones appairés
-	(renommer, oublier), derniers textes échangés, appairage d'un téléphone
+	(batterie, renommer, oublier), faire sonner le téléphone, derniers
+	textes échangés, appairage d'un téléphone
 	par QR code.
 	inApp : appli PC
 */
@@ -51,6 +53,8 @@ fun DevicesPanel(inApp: DesktopApp)
 	val vState    by inApp.link.state.collectAsState()											// état de la liaison
 	val vSettings by inApp.settings.collectAsState()											// réglages
 	val vClips    by inApp.history.items.collectAsState()										// historique
+	val vBattery  by inApp.battery.collectAsState()												// batterie des téléphones
+	var vRing     by remember { mutableStateOf<String?>(null) }								// résultat de « Faire sonner »
 	var vRename   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à renommer
 	var vForget   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à oublier
 	var vNow      by remember { mutableStateOf(System.currentTimeMillis()) }					// horloge (compte à rebours, « vu il y a »)
@@ -79,12 +83,20 @@ fun DevicesPanel(inApp: DesktopApp)
 					inIcon     = LineIcons.Phone,
 					inName     = vPhone.label,
 					inLook     = if (vOn) LinkLook.Connected else LinkLook.Absent,
-					inStatus   = if (vOn) "Relié" else "Absent",
+					inStatus   = if (vOn) "Relié" + vBattery[vPhone.id]?.let { " · ${it.level} %${if (it.charging) " (en charge)" else ""}" }.orEmpty() else "Absent",
 					inLastSeen = vPhone.lastSeen?.let { relativeTime(it, vNow) },
 					inOnRename = { vRename = vPhone },
 					inOnForget = { vForget = vPhone }
 				)
 			}
+		}
+		if (vState.connected.isNotEmpty())
+		{
+			Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+				GhostButton("Faire sonner le téléphone", { vRing = inApp.ring(true).let { if (it.isEmpty()) "Aucun téléphone relié." else "${it.joinToString(" et ")} sonne, même en silencieux." } }, Modifier.widthIn(max = 300.dp))
+				TextLink("Arrêter la sonnerie", { inApp.ring(false); vRing = null })
+			}
+			vRing?.let { BasicText(it, style = vType.bodySmall) }
 		}
 		if (vClips.isNotEmpty())
 		{

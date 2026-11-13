@@ -42,6 +42,9 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.window.rememberWindowState
+import fr.maubin.bridgeplus.desktop.update.DesktopUpdateInstaller
+import fr.maubin.bridgeplus.desktop.update.appFolder
+import fr.maubin.bridgeplus.desktop.update.cleanLeftover
 import fr.maubin.bridgeplus.ui.components.LocalAnimationsEnabled
 import fr.maubin.bridgeplus.ui.icons.LineIcons
 import fr.maubin.bridgeplus.ui.screens.WorkScreen
@@ -50,6 +53,8 @@ import fr.maubin.bridgeplus.ui.theme.BridgeColors
 import fr.maubin.bridgeplus.ui.theme.BridgePlusTheme
 import fr.maubin.bridgeplus.ui.theme.bridgeType
 import fr.maubin.bridgeplus.ui.theme.logoImage
+import fr.maubin.bridgeplus.ui.update.UpdateDialog
+import fr.maubin.bridgeplus.ui.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -89,9 +94,22 @@ fun main(inArgs: Array<String>)
 	vCommand?.let(vApp::command)
 	application {
 		val vScope    = rememberCoroutineScope()														// boîtes de dialogue
+		val vUpdates  = remember {
+			UpdateManager(
+				DesktopUpdateInstaller(fOnQuit = { vApp.stop(); vInstance.release(); exitApplication() }),
+				{ vApp.settings.value.updates },
+				{ vApp.settings.value.ignoredUpdate },
+				{ vVersion -> vApp.updateSettings { it.copy(ignoredUpdate = vVersion) } }
+			).also { vApp.updates = it }
+		}																							// mises à jour (GitHub)
+		LaunchedEffect(Unit) {
+			if (withContext(Dispatchers.IO) { appFolder()?.let(::cleanLeftover) } == true) vApp.notify("Mise à jour", "La mise à jour précédente n'a pas pu remplacer l'appli : elle vous sera reproposée.")
+			vUpdates.checkAtLaunch()
+		}
 		val vState    by vApp.link.state.collectAsState()											// état de la liaison
 		val vSettings by vApp.settings.collectAsState()											// réglages
 		val vLook     = pcLook(vState)																// état en clair
+		val vBattery  by vApp.battery.collectAsState()												// batterie des téléphones
 		val vTray     = rememberTrayState()														// icône de la zone de notification
 		val vIcon     = remember(vLook.look) { BitmapPainter(trayImage(vLook.look, 64)) }		// icône selon l'état
 		val vLogo     = remember { BitmapPainter(logoImage(64)) }									// logo de la fenêtre
@@ -107,6 +125,7 @@ fun main(inArgs: Array<String>)
 		LaunchedEffect(Unit) { vInstance.commands.collect { vApp.command(it) } }
 		val vChoice   by vApp.pendingChoice.collectAsState()										// fichiers en attente du choix du téléphone
 		LaunchedEffect(vChoice) { if (vChoice != null) vVisible = true }
+		LaunchedEffect(vUpdates.state != null) { if (vUpdates.state != null && !vVisible) vApp.notify("Nouvelle version de BridgePlus", "Ouvrez BridgePlus pour l'installer.") }
 		CompositionLocalProvider(LocalAnimationsEnabled provides remember { SystemPrefs.animationsEnabled() }) {
 			HistoryWindow(
 				inRequest  = vCard,
@@ -121,12 +140,14 @@ fun main(inArgs: Array<String>)
 		Tray(
 			icon     = vIcon,
 			state    = vTray,
-			tooltip  = "BridgePlus — ${vLook.title}",
+			tooltip  = "BridgePlus — ${vLook.title}" + vBattery.values.firstOrNull()?.let { " · ${it.level} %" }.orEmpty(),
 			onAction = { vVisible = true },
 			menu     = {
 				Item("Ouvrir BridgePlus", onClick = { vVisible = true })
 				Item("Historique du presse-papiers", onClick = { vSerial++; vCard = CardRequest(ActiveWindow(null, null), vSerial) })
 				Item("Envoyer un fichier…", onClick = { vScope.launch { chooseFiles()?.let { vApp.sendFiles(it) } } })
+				Item("Ouvrir sur le téléphone le lien copié", onClick = { vApp.notify("Lien", vApp.sendLink(copiedText().orEmpty())) })
+				Item("Faire sonner le téléphone", onClick = { if (vApp.ring(true).isEmpty()) vApp.notify("Sonnerie", "Aucun téléphone relié.") })
 				Item("Appairer un téléphone", onClick = { vPage = PcPage.Devices; vVisible = true; vApp.background { startPairing() } })
 				Item("Réglages", onClick = { vPage = PcPage.Settings; vVisible = true })
 				Separator()
@@ -162,6 +183,7 @@ fun main(inArgs: Array<String>)
 				CompositionLocalProvider(LocalAnimationsEnabled provides vAnimations) {
 					PcWindow(vApp, vPage) { vPage = it }
 					vChoice?.let { vFiles -> PhoneChoiceDialog(vApp, vFiles) }
+					if (vUpdates.state != null) UpdateDialog(vUpdates)
 				}
 			}
 		}

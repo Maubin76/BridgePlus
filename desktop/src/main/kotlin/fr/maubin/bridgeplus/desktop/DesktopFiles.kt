@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import fr.maubin.bridgeplus.link.isWebLink
 import fr.maubin.bridgeplus.transfer.sizeText
 import fr.maubin.bridgeplus.ui.components.GhostButton
 import fr.maubin.bridgeplus.ui.components.TextLink
@@ -38,7 +39,8 @@ fun argAfter(
 
 /*
 	Fichiers déposés sur une fenêtre (glisser-déposer depuis l'Explorateur) :
-	envoyés au téléphone. Les dossiers sont ignorés.
+	envoyés au téléphone (les dossiers sont ignorés). Un lien web déposé
+	(depuis la barre d'adresse du navigateur) s'ouvre sur le téléphone.
 	inWindow : fenêtre
 	inApp    : appli PC
 */
@@ -47,7 +49,7 @@ fun acceptDroppedFiles(
 	inApp    : DesktopApp
 )
 {
-	inWindow.dropTarget = DropTarget(inWindow, DnDConstants.ACTION_COPY, object : DropTargetAdapter()
+	inWindow.dropTarget = DropTarget(inWindow, DnDConstants.ACTION_COPY_OR_MOVE or DnDConstants.ACTION_LINK, object : DropTargetAdapter()
 	{
 		/*
 			Fichiers déposés.
@@ -55,7 +57,15 @@ fun acceptDroppedFiles(
 		*/
 		override fun drop(inEvent: DropTargetDropEvent)
 		{
-			if (!inEvent.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) { inEvent.rejectDrop(); return }
+			if (!inEvent.isDataFlavorSupported(DataFlavor.javaFileListFlavor))
+			{
+				if (!inEvent.isDataFlavorSupported(DataFlavor.stringFlavor)) { inEvent.rejectDrop(); return }
+				inEvent.acceptDrop(DnDConstants.ACTION_COPY)
+				val vText = inEvent.transferable.getTransferData(DataFlavor.stringFlavor) as? String	// texte déposé
+				inEvent.dropComplete(true)
+				if (vText != null && isWebLink(vText)) inApp.notify("Lien", inApp.sendLink(vText))
+				return
+			}
 			inEvent.acceptDrop(DnDConstants.ACTION_COPY)
 			val vFiles = (inEvent.transferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<*>).orEmpty().filterIsInstance<File>()	// fichiers déposés
 			inEvent.dropComplete(true)
@@ -63,6 +73,12 @@ fun acceptDroppedFiles(
 		}
 	}, true)
 }
+
+/*
+	Texte du presse-papiers de Windows ; null sans texte.
+*/
+fun copiedText(): String? =
+	runCatching { java.awt.Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as? String }.getOrNull()
 
 /*
 	Choix du téléphone quand plusieurs sont reliés : un bouton par téléphone,
