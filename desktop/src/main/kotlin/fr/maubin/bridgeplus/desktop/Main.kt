@@ -90,6 +90,7 @@ fun main(inArgs: Array<String>)
 		var vTold     by remember { mutableStateOf(false) }										// notification « toujours là » déjà montrée
 		val vShow     by vInstance.requests.collectAsState()										// demandes d'une seconde instance
 		LaunchedEffect(vShow) { if (vShow > 0) vVisible = true }
+		LaunchedEffect(Unit) { vApp.notices.collect { vTray.sendNotification(Notification("BridgePlus", it, Notification.Type.Warning)) } }
 		LaunchedEffect(Unit) {
 			if (vSettings.launchAtStartup && WindowsStartup.exe != null) withContext(Dispatchers.IO) { if (!WindowsStartup.isOn()) WindowsStartup.set(true) }
 		}

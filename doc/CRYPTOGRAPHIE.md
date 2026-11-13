@@ -45,6 +45,13 @@ sequenceDiagram
 - Le contenu en clair commence par un octet de nature : message JSON, ou morceau de fichier binaire (pas de base64 : un fichier ne grossit pas d'un tiers).
 - Une trame fait 64 Mo au plus, comme dans KeePlus.
 
+Le presse-papiers circule dans ces trames, comme message `presse-papiers` (texte de 1 Mo au plus).
+Un contenu marqué sensible n'est **jamais lu** : sur le PC, les marques
+(`ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory` ou
+`CanUploadToCloudClipboard` à 0, `Clipboard Viewer Ignore`) sont vérifiées avant le texte ; sur
+Android, `ClipDescription.EXTRA_IS_SENSITIVE`. Aucun texte échangé n'est écrit dans un journal ;
+les derniers échanges ne vivent qu'en mémoire (l'historique chiffré viendra à l'étape 3).
+
 **En clair sur le réseau** : seulement la présentation (`hello`, nom et version de l'appareil, pour le diagnostic) et les refus (`error`). Rien d'autre.
 
 ## Battement de cœur

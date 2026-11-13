@@ -1,5 +1,8 @@
 package fr.maubin.bridgeplus
 
+import fr.maubin.bridgeplus.clip.ClipOutcome
+import fr.maubin.bridgeplus.clip.ClipRelay
+import fr.maubin.bridgeplus.clip.kMaxClipBytes
 import fr.maubin.bridgeplus.link.Backoff
 import fr.maubin.bridgeplus.link.DeviceInfo
 import fr.maubin.bridgeplus.link.LinkClient
@@ -17,9 +20,12 @@ import fr.maubin.bridgeplus.link.Wire
 import fr.maubin.bridgeplus.link.newLinkKey
 import fr.maubin.bridgeplus.link.readWire
 import fr.maubin.bridgeplus.link.writeData
+import fr.maubin.bridgeplus.peers.PairedPc
+import fr.maubin.bridgeplus.peers.PairedPhone
 import fr.maubin.bridgeplus.peers.PcLink
 import fr.maubin.bridgeplus.peers.PcStatus
 import fr.maubin.bridgeplus.peers.PhoneLink
+import fr.maubin.bridgeplus.settings.BridgeSettings
 import fr.maubin.bridgeplus.store.KeyBox
 import fr.maubin.bridgeplus.store.SealedFile
 import org.junit.After
@@ -233,6 +239,40 @@ class SessionTest
 	}
 
 	/*
+		Presse-papiers dans les deux sens, à travers de vraies sessions : un
+		texte copié sur le téléphone arrive dans celui du PC, et inversement ;
+		un texte de 1 Mo passe ; le texte reçu ne repart pas (écho).
+	*/
+	@Test
+	fun clipboardBothWays()
+	{
+		val vPcBoard    = LinkedBlockingQueue<String>()												// presse-papiers du PC
+		val vPhoneBoard = LinkedBlockingQueue<String>()												// presse-papiers du téléphone
+		var vPcRelay    : ClipRelay? = null															// relais du PC
+		var vPhoneRelay : ClipRelay? = null															// relais du téléphone
+		val vPc    = pcLink("pc.json", freePort(), inOnMessage = { vPhone, vMessage -> if (vMessage is LinkMessage.Clip) vPcRelay?.receive(vPhone.label, vMessage) })	// liaison du PC
+		val vPhone = phoneLink("tel.json", inOnMessage = { vPcInfo, vMessage -> if (vMessage is LinkMessage.Clip) vPhoneRelay?.receive(vPcInfo.label, vMessage) })	// liaison du téléphone
+		vPcRelay    = ClipRelay(vPc::sendAll, { vPcBoard.add(it) }, { BridgeSettings() })
+		vPhoneRelay = ClipRelay(vPhone::sendAll, { vPhoneBoard.add(it) }, { BridgeSettings() })
+		vPc.startPairing()
+		val vOffer = vPc.state.value.offer!!														// offre
+		assertNull(vPhone.pair(vOffer, kWifi))
+		vPhone.start()
+		awaitTrue { vPhone.state.value.statusOf(vOffer.pcId) == PcStatus.Connected && vPc.state.value.connected.isNotEmpty() }
+
+		assertEquals(ClipOutcome.Sent, vPhoneRelay.offer("copié sur le téléphone", false).outcome)
+		assertEquals("copié sur le téléphone", vPcBoard.poll(5, TimeUnit.SECONDS))
+		assertEquals(ClipOutcome.Echo, vPcRelay.offer("copié sur le téléphone", false).outcome)
+
+		assertEquals(listOf("Pixel"), vPcRelay.offer("copié sur le PC", false).peers)
+		assertEquals("copié sur le PC", vPhoneBoard.poll(5, TimeUnit.SECONDS))
+
+		val vBig = "x".repeat(kMaxClipBytes)														// 1 Mo
+		assertEquals(ClipOutcome.Sent, vPcRelay.offer(vBig, false).outcome)
+		assertEquals(vBig, vPhoneBoard.poll(10, TimeUnit.SECONDS))
+	}
+
+	/*
 		Écoute limitée : un serveur lié à 127.0.0.1 n'accepte rien sur
 		127.0.0.2 ; retirer l'adresse ferme l'écoute.
 	*/
@@ -304,14 +344,16 @@ class SessionTest
 		inPort : port du serveur
 		inName : nom du PC
 		inNow  : horloge
+		inOnMessage : message reçu d'un téléphone
 	*/
 	private fun pcLink(
-		inFile : String,
-		inPort : Int,
-		inName : String = "PC du séjour",
-		inNow  : () -> Long = System::currentTimeMillis
+		inFile      : String,
+		inPort      : Int,
+		inName      : String = "PC du séjour",
+		inNow       : () -> Long = System::currentTimeMillis,
+		inOnMessage : (PairedPhone, LinkMessage) -> Unit = { _, _ -> }
 	): PcLink =
-		PcLink(SealedFile(fTemp.root.resolve(inFile), KeyBox(kBoxKey)), inName, "1.0", { kHome }, fNow = inNow, fPort = inPort, fBeacon = 0, fPingEveryMs = 200, fDeadAfterMs = 2_000)
+		PcLink(SealedFile(fTemp.root.resolve(inFile), KeyBox(kBoxKey)), inName, "1.0", { kHome }, inOnMessage, fNow = inNow, fPort = inPort, fBeacon = 0, fPingEveryMs = 200, fDeadAfterMs = 2_000)
 			.also { fStops += it::stop }
 
 	/*
@@ -320,13 +362,15 @@ class SessionTest
 		inFile : nom du fichier des appareils
 		inName : nom du téléphone
 		inNow  : horloge
+		inOnMessage : message reçu d'un PC
 	*/
 	private fun phoneLink(
-		inFile : String,
-		inName : String = "Pixel",
-		inNow  : () -> Long = System::currentTimeMillis
+		inFile      : String,
+		inName      : String = "Pixel",
+		inNow       : () -> Long = System::currentTimeMillis,
+		inOnMessage : (PairedPc, LinkMessage) -> Unit = { _, _ -> }
 	): PhoneLink =
-		PhoneLink(SealedFile(fTemp.root.resolve(inFile), KeyBox(kBoxKey)), inName, "1.0", { emptyList() }, fNow = inNow, fDeadAfterMs = 2_000, fBackoff = { Backoff(50, 300, 0.0) })
+		PhoneLink(SealedFile(fTemp.root.resolve(inFile), KeyBox(kBoxKey)), inName, "1.0", { emptyList() }, inOnMessage, fNow = inNow, fDeadAfterMs = 2_000, fBackoff = { Backoff(50, 300, 0.0) })
 			.also { fStops += it::stop }
 
 	/*

@@ -296,4 +296,18 @@ object LineIcons
 		"M9 16 a4.2 4.2 0 0 1 6 0",
 		"M12 19.2 V19.4"
 	)
+
+	// Envoyé : flèche qui monte vers l'autre appareil.
+	val Sent: ImageVector = lineIcon(
+		"Envoyé",
+		"M12 19 V5",
+		"M6.5 10.5 L12 5 L17.5 10.5"
+	)
+
+	// Reçu : flèche qui descend de l'autre appareil.
+	val Received: ImageVector = lineIcon(
+		"Reçu",
+		"M12 5 V19",
+		"M6.5 13.5 L12 19 L17.5 13.5"
+	)
 }

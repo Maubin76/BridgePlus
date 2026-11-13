@@ -10,6 +10,9 @@ private val kSettingsJson = Json { ignoreUnknownKeys = true; encodeDefaults = tr
 /*
 	Réglages de l'appli, propres à l'appareil (non échangés). Les réglages
 	des étapes suivantes (presse-papiers, notifications…) s'ajoutent ici.
+	clipSend          : les copies de cet appareil partent d'elles-mêmes vers l'autre
+	                    (les gestes explicites, tuile et partage, envoient toujours)
+	clipReceive       : les textes reçus de l'autre appareil vont dans le presse-papiers
 	launchAtStartup   : PC : BridgePlus démarre avec Windows
 	firewallExplained : PC : l'explication du pare-feu a été lue
 	updates           : nouvelle version cherchée au lancement
@@ -17,6 +20,8 @@ private val kSettingsJson = Json { ignoreUnknownKeys = true; encodeDefaults = tr
 */
 @Serializable
 data class BridgeSettings(
+	val clipSend          : Boolean = true,
+	val clipReceive       : Boolean = true,
 	val launchAtStartup   : Boolean = true,
 	val firewallExplained : Boolean = false,
 	val updates           : Boolean = true,

@@ -39,11 +39,23 @@ deux secondes**.
 | Étape | Contenu | État |
 |---|---|---|
 | 1 | Modules, thème, liaison chiffrée, appairage par QR code, connexion permanente avec reconnexion | ✅ |
-| 2 | Presse-papiers dans les deux sens, contenus sensibles exclus | à venir |
+| 2 | Presse-papiers dans les deux sens, contenus sensibles exclus | ✅ (branche `develop`) |
 | 3 | Historique chiffré, carte du PC (Ctrl+Alt+V) | à venir |
 | 4 | Envoi de fichiers dans les deux sens | à venir |
 | 5 | Notifications du téléphone sur le PC | à venir |
 | 6 | Sonnerie, batterie, liens, assistant de premier lancement | à venir |
+
+## Le presse-papiers
+
+- **Du PC vers le téléphone** : chaque texte copié sur le PC arrive dans le presse-papiers du
+  téléphone. Si Android refuse, une notification « Texte reçu » propose **Copier**.
+- **Du téléphone vers le PC** : Android interdit à une appli en arrière-plan de lire le
+  presse-papiers. Trois gestes : la **tuile de réglages rapides** « Envoyer au PC », l'entrée
+  **« Envoyer au PC » du menu de partage**, ou simplement **ouvrir BridgePlus** (la copie part
+  d'elle-même).
+- **Jamais un secret** : ce que KeePlus, KeePass ou un autre gestionnaire marque comme sensible
+  n'est ni lu ni envoyé.
+- Texte seul, 1 Mo au plus. Chaque sens se désactive dans les réglages.
 
 ## Installer
 

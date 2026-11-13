@@ -41,6 +41,21 @@ sealed interface LinkMessage
 	@Serializable
 	@SerialName("oublie")
 	data object Forgotten : LinkMessage
+
+	/*
+		Texte copié sur l'expéditeur, à placer dans le presse-papiers du
+		destinataire. Jamais un contenu marqué sensible.
+		id   : identifiant de l'envoi (tiré au hasard)
+		text : texte (1 Mo au plus en UTF-8)
+		at   : date de la copie (ms)
+	*/
+	@Serializable
+	@SerialName("presse-papiers")
+	data class Clip(
+		val id   : String,
+		val text : String,
+		val at   : Long
+	) : LinkMessage
 }
 
 /*

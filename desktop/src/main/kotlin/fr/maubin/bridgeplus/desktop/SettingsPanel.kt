@@ -15,13 +15,14 @@ import androidx.compose.ui.unit.dp
 import fr.maubin.bridgeplus.ui.components.FilterPill
 import fr.maubin.bridgeplus.ui.screens.ErrorLine
 import fr.maubin.bridgeplus.ui.screens.OnOffSetting
+import fr.maubin.bridgeplus.ui.screens.SettingsDivider
 import fr.maubin.bridgeplus.ui.screens.SettingsSection
 import fr.maubin.bridgeplus.ui.theme.BridgeColors
 import fr.maubin.bridgeplus.ui.theme.bridgeType
 
 /*
-	Page Réglages du PC : démarrage avec Windows, réseaux de la maison, à
-	propos.
+	Page Réglages du PC : presse-papiers (chaque sens), démarrage avec
+	Windows, réseaux de la maison, à propos.
 	inApp : appli PC
 */
 @OptIn(ExperimentalLayoutApi::class)
@@ -33,6 +34,15 @@ fun SettingsPanel(inApp: DesktopApp)
 	val vSettings by inApp.settings.collectAsState()											// réglages
 	var vStartErr by remember { mutableStateOf<String?>(null) }								// échec du réglage du démarrage
 	Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+		SettingsSection("Presse-papiers") {
+			OnOffSetting("Du PC vers le téléphone", "Chaque texte copié sur le PC part vers le téléphone. Les contenus marqués sensibles (KeePlus, gestionnaires de mots de passe) ne partent jamais.", vSettings.clipSend) { vOn ->
+				inApp.updateSettings { it.copy(clipSend = vOn) }
+			}
+			SettingsDivider()
+			OnOffSetting("Du téléphone vers le PC", "Les textes envoyés par le téléphone sont placés dans le presse-papiers du PC.", vSettings.clipReceive) { vOn ->
+				inApp.updateSettings { it.copy(clipReceive = vOn) }
+			}
+		}
 		SettingsSection("Démarrage") {
 			OnOffSetting("Lancer BridgePlus avec Windows", "BridgePlus démarre discrètement dans la zone de notification.", vSettings.launchAtStartup) { vOn ->
 				inApp.updateSettings { it.copy(launchAtStartup = vOn) }

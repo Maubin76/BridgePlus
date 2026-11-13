@@ -269,6 +269,14 @@ class PhoneLink(
 	): Boolean = fLoops[inId]?.session()?.send(inMessage) ?: false
 
 	/*
+		Envoie un message à tous les PC reliés ; rend les noms de ceux qui
+		l'ont reçu.
+		inMessage : message
+	*/
+	fun sendAll(inMessage: LinkMessage): List<String> =
+		fLoops.entries.toList().filter { it.value.session()?.send(inMessage) == true }.mapNotNull { vEntry -> fPeers.pcs.firstOrNull { it.id == vEntry.key }?.label }
+
+	/*
 		Une boucle par PC appairé tant que la liaison tourne, aucune sinon.
 	*/
 	private fun syncLoops()

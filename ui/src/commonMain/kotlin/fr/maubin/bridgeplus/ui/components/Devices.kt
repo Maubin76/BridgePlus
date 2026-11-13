@@ -213,3 +213,32 @@ fun InfoCard(
 		}
 	}
 }
+
+/*
+	Ligne d'un échange du presse-papiers : sens (icône et texte pour les
+	lecteurs d'écran), texte sur une ligne, appareil et moment.
+	inOutgoing : vrai pour un texte envoyé, faux pour un texte reçu
+	inText     : texte échangé
+	inPeers    : appareils concernés
+	inWhen     : moment en clair (« il y a 2 min »)
+*/
+@Composable
+fun ClipRow(
+	inOutgoing : Boolean,
+	inText     : String,
+	inPeers    : String,
+	inWhen     : String
+)
+{
+	val vType = bridgeType()																	// styles de texte
+	Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+		Box(Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(BridgeColors.surfaceHigh), contentAlignment = Alignment.Center) {
+			Icon(if (inOutgoing) LineIcons.Sent else LineIcons.Received, contentDescription = if (inOutgoing) "Envoyé" else "Reçu", tint = BridgeColors.textMuted, modifier = Modifier.size(18.dp))
+		}
+		Spacer(Modifier.width(12.dp))
+		Column(Modifier.weight(1f)) {
+			OneLine(inText.replace('\n', ' ').trim(), vType.body)
+			OneLine("${if (inOutgoing) "Vers" else "De"} $inPeers · $inWhen", vType.bodySmall)
+		}
+	}
+}

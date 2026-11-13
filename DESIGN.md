@@ -125,6 +125,7 @@ Un **pont noir** (tablier fin posé sur une arche) surmonté du « + » de la ga
 - **Sections** (`SettingsSection`) : titre discret en `body-small`, puis une carte `surface` au contour `rule`, rayon `card`.
 - **Pastilles de choix** (`FilterPill`) : oui ou non (« Activé » / « Désactivé »), réseaux de la maison. Pas d'interrupteur.
 - **Ligne d'appareil** : icône dans un carré `surface-high` (rayon `device-icon`), nom en `title`, pastille d'état et « vu il y a… », actions renommer et oublier en icônes rondes. Pas de séparateur.
+- **Ligne d'échange** (`ClipRow`) : sens dans un petit carré `surface-high` (flèche qui monte : envoyé ; qui descend : reçu), texte sur une ligne, puis « Vers Bureau · il y a 2 min » en `body-small`.
 - **Dialogues** : carte `surface-high` de rayon 24, titre `headline`, texte `body-small`, deux boutons fantômes.
 - **Encadré d'explication** : carte `surface`, icône `text-muted` et une phrase, avec un lien d'action (autorisations, pare-feu).
 - **Icônes** : le jeu au trait de 1,6 de KeePlus, complété des icônes de la liaison (maillons, maison barrée, ordinateur, téléphone, QR code, Wi-Fi).

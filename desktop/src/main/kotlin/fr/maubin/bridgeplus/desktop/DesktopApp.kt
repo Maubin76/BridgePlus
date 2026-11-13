@@ -1,5 +1,8 @@
 package fr.maubin.bridgeplus.desktop
 
+import fr.maubin.bridgeplus.clip.ClipOutcome
+import fr.maubin.bridgeplus.clip.ClipRelay
+import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.LocalNetwork
 import fr.maubin.bridgeplus.peers.PcLink
 import fr.maubin.bridgeplus.peers.PcLinkState
@@ -13,7 +16,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -44,6 +49,12 @@ fun pcName(): String =
 */
 fun appVersion(): String? =
 	runCatching { DesktopApp::class.java.getResourceAsStream("/version.properties")?.use { Properties().apply { load(it) }.getProperty("version") } }.getOrNull()
+
+/*
+	Taille en mégaoctets, à une décimale (« 1,4 Mo »).
+	inBytes : taille en octets
+*/
+fun megabytes(inBytes: Int): String = String.format(java.util.Locale.FRENCH, "%.1f Mo", inBytes / (1024.0 * 1024.0))
 
 /*
 	Allure de l'état de la liaison du PC : icône et titre en deux tons
@@ -84,9 +95,10 @@ fun pcLook(inState: PcLinkState): PcLook
 }
 
 /*
-	Appli PC : liaison avec les téléphones, réglages, et surveillance du
-	réseau (lecture rapide des adresses toutes les 5 s ; relecture complète
-	des réseaux à chaque changement, et au moins toutes les minutes).
+	Appli PC : liaison avec les téléphones, presse-papiers partagé, réglages,
+	et surveillance du réseau (lecture rapide des adresses toutes les 5 s ;
+	relecture complète des réseaux à chaque changement, et au moins toutes
+	les minutes).
 	fDir      : dossier des données
 	fBox      : coffret du fichier des appareils
 	fNetworks : lecture des réseaux du PC
@@ -101,10 +113,28 @@ class DesktopApp(
 	private val fStore    = SettingsStore(File(fDir, "reglages.json"))						// fichier des réglages
 	private val fSettings = MutableStateFlow(fStore.load())									// réglages
 
+	private val fNotices  = MutableSharedFlow<String>(extraBufferCapacity = 8)				// messages pour l'utilisateur (notifications)
+	private var fBoard    : WinClipboard? = null											// presse-papiers de Windows ; null ailleurs
+
 	/*
-		Liaison avec les téléphones.
+		Liaison avec les téléphones ; les textes reçus vont au relais du
+		presse-papiers.
 	*/
-	val link = PcLink(SealedFile(File(fDir, "appareils.bin"), fBox), pcName(), appVersion() ?: "dev", fNetworks)
+	val link: PcLink = PcLink(SealedFile(File(fDir, "appareils.bin"), fBox), pcName(), appVersion() ?: "dev", fNetworks, { vPhone, vMessage ->
+		if (vMessage is LinkMessage.Clip) clips.receive(vPhone.label, vMessage)
+	})
+
+	/*
+		Relais du presse-papiers : copies du PC vers les téléphones reliés,
+		textes reçus placés dans le presse-papiers de Windows.
+	*/
+	val clips: ClipRelay = ClipRelay(link::sendAll, { fBoard?.write(it) ?: false }, { fSettings.value })
+
+	/*
+		Messages à montrer à l'utilisateur dans une notification (texte trop
+		long, par exemple).
+	*/
+	val notices: SharedFlow<String> = fNotices
 
 	/*
 		Réglages en cours.
@@ -116,6 +146,7 @@ class DesktopApp(
 	*/
 	fun start()
 	{
+		if (WinClipboard.available) fBoard = WinClipboard(::copied).also { it.start() }
 		fScope.launch {
 			var vPrint = ""																	// dernière empreinte des adresses
 			var vLast  = 0L																	// dernière relecture complète
@@ -132,6 +163,21 @@ class DesktopApp(
 				delay(kQuickCheckMs)
 			}
 		}
+	}
+
+	/*
+		Copie d'une autre appli sur le PC : proposée au relais. Un texte trop
+		long le dit dans une notification ; le reste est silencieux.
+		inText      : texte copié ; null sans texte
+		inSensitive : contenu marqué sensible
+	*/
+	private fun copied(
+		inText      : String?,
+		inSensitive : Boolean
+	)
+	{
+		val vResult = clips.offer(inText, inSensitive)												// issue
+		if (vResult.outcome == ClipOutcome.TooLarge) fNotices.tryEmit("Texte trop long pour le presse-papiers (${megabytes(vResult.bytes)}) : il n'a pas été envoyé au téléphone.")
 	}
 
 	/*

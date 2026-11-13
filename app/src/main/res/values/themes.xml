@@ -6,4 +6,14 @@
 		<item name="android:windowBackground">@color/ground</item>
 		<item name="android:windowSplashScreenBackground">@color/ground</item>
 	</style>
+
+	<!-- Activité transparente des gestes (tuile, partage, « Copier ») : rien ne s'affiche que le
+	     message bref ; ni fond, ni animation. -->
+	<style name="Theme.BridgePlus.Transparent" parent="android:Theme.Material.NoActionBar">
+		<item name="android:windowIsTranslucent">true</item>
+		<item name="android:windowBackground">@android:color/transparent</item>
+		<item name="android:windowNoTitle">true</item>
+		<item name="android:windowAnimationStyle">@null</item>
+		<item name="android:backgroundDimEnabled">false</item>
+	</style>
 </resources>

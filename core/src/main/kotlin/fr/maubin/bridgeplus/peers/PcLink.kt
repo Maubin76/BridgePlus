@@ -240,6 +240,14 @@ class PcLink(
 	): Boolean = fSessions[inId]?.send(inMessage) ?: false
 
 	/*
+		Envoie un message à tous les téléphones reliés ; rend les noms de ceux
+		qui l'ont reçu.
+		inMessage : message
+	*/
+	fun sendAll(inMessage: LinkMessage): List<String> =
+		fSessions.entries.toList().filter { it.value.send(inMessage) }.mapNotNull { vEntry -> fPeers.phones.firstOrNull { it.id == vEntry.key }?.label }
+
+	/*
 		Arrête l'écoute et ferme les sessions (fermeture de l'appli).
 	*/
 	@Synchronized

@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import fr.maubin.bridgeplus.peers.PairedPhone
 import fr.maubin.bridgeplus.text.relativeTime
+import fr.maubin.bridgeplus.ui.components.ClipRow
 import fr.maubin.bridgeplus.ui.components.DeviceRow
 import fr.maubin.bridgeplus.ui.components.ForgetDialog
 import fr.maubin.bridgeplus.ui.components.GhostButton
@@ -39,7 +40,8 @@ import kotlinx.coroutines.delay
 /*
 	Page Appareils du PC : état de la liaison en grand (titre en deux tons),
 	explication du pare-feu au premier lancement, téléphones appairés
-	(renommer, oublier), appairage d'un téléphone par QR code.
+	(renommer, oublier), derniers textes échangés, appairage d'un téléphone
+	par QR code.
 	inApp : appli PC
 */
 @Composable
@@ -48,6 +50,7 @@ fun DevicesPanel(inApp: DesktopApp)
 	val vType     = bridgeType()																	// styles de texte
 	val vState    by inApp.link.state.collectAsState()											// état de la liaison
 	val vSettings by inApp.settings.collectAsState()											// réglages
+	val vClips    by inApp.clips.recent.collectAsState()										// derniers échanges
 	var vRename   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à renommer
 	var vForget   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à oublier
 	var vNow      by remember { mutableStateOf(System.currentTimeMillis()) }					// horloge (compte à rebours, « vu il y a »)
@@ -81,6 +84,12 @@ fun DevicesPanel(inApp: DesktopApp)
 					inOnRename = { vRename = vPhone },
 					inOnForget = { vForget = vPhone }
 				)
+			}
+		}
+		if (vClips.isNotEmpty())
+		{
+			SettingsSection("Derniers échanges") {
+				for (vClip in vClips.take(5)) ClipRow(vClip.outgoing, vClip.text, vClip.peers.joinToString(", "), relativeTime(vClip.at, vNow))
 			}
 		}
 		if (vOffer != null)

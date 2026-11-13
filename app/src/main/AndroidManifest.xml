@@ -6,7 +6,8 @@
      liaison permanente avec le PC, sans limite de durée (dataSync est limité à 6 h par jour depuis
      Android 15) ; son prérequis est CHANGE_WIFI_STATE. Démarrage : relance de la liaison après un
      redémarrage. Batterie : demande d'exclusion de l'optimisation, sans laquelle Android interdit de
-     relancer la liaison au retour à la maison. -->
+     relancer la liaison au retour à la maison. Presse-papiers : lu seulement au premier plan (écran,
+     activité transparente de la tuile et du partage), jamais un contenu marqué sensible. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
 	<uses-permission android:name="android.permission.INTERNET" />
@@ -44,6 +45,37 @@
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+
+		<!-- Gestes explicites du presse-papiers : « Envoyer au PC » du menu de partage (texte), de la
+		     tuile, et « Copier » d'un texte reçu. Activité transparente : Android ne laisse lire et
+		     écrire le presse-papiers qu'à l'appli au premier plan. -->
+		<activity
+			android:name=".ClipActivity"
+			android:exported="true"
+			android:label="@string/send_to_pc"
+			android:icon="@mipmap/ic_launcher"
+			android:theme="@style/Theme.BridgePlus.Transparent"
+			android:excludeFromRecents="true"
+			android:noHistory="true"
+			android:taskAffinity="">
+			<intent-filter>
+				<action android:name="android.intent.action.SEND" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data android:mimeType="text/plain" />
+			</intent-filter>
+		</activity>
+
+		<!-- Tuile de réglages rapides « Envoyer au PC » (seul le système peut s'y lier). -->
+		<service
+			android:name=".ClipTileService"
+			android:exported="true"
+			android:label="@string/send_to_pc"
+			android:icon="@drawable/ic_tile_send"
+			android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+			<intent-filter>
+				<action android:name="android.service.quicksettings.action.QS_TILE" />
+			</intent-filter>
+		</service>
 
 		<!-- Liaison permanente avec les PC, tant que le téléphone est sur le Wi-Fi de la maison. -->
 		<service

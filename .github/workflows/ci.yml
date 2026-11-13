@@ -1,6 +1,6 @@
-# Intégration continue de BridgePlus : à chaque push sur main, construit tout et lance
-# toute la suite de tests (module commun, appli PC, appli Android, lint), puis publie
-# une version :
+# Intégration continue de BridgePlus : à chaque push sur main ou develop, construit tout
+# et lance toute la suite de tests (module commun, appli PC, appli Android, lint). Sur
+# main seulement, publie ensuite une version :
 #
 # - Version : « 1.<nombre de commits> », comme dans le build Gradle (rien à
 #   incrémenter à la main, aucun commit de la CI).
@@ -19,7 +19,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 # Exécutions à la suite, sans en interrompre une : une publication coupée en
