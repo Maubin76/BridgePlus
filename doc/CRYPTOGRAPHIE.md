@@ -1,9 +1,9 @@
-# PontPlus — la cryptographie, en clair
+# BridgePlus — la cryptographie, en clair
 
-PontPlus fait passer des textes copiés, des fichiers et des notifications entre le téléphone et le
+BridgePlus fait passer des textes copiés, des fichiers et des notifications entre le téléphone et le
 PC. Tout passe **directement par le Wi-Fi de la maison**, et tout est **chiffré de bout en bout**
 avec une clé que seuls les deux appareils connaissent. La base vient de KeePlus (appairage par QR
-code, messages scellés en AES-GCM). PontPlus y ajoute des **sessions** : une connexion reste ouverte
+code, messages scellés en AES-GCM). BridgePlus y ajoute des **sessions** : une connexion reste ouverte
 en permanence, avec des clés propres à chaque session.
 
 ## L'appairage : la clé passe par vos yeux, pas par le réseau
@@ -32,7 +32,7 @@ sequenceDiagram
    - l'expéditeur annoncé est bien celui de la trame.
 3. Le PC répond par une trame scellée avec la même clé, **liée à la demande** (son numéro figure dans les données authentifiées) et portant son propre défi.
 4. Chaque côté calcule **deux clés de session**, une par sens, avec HKDF-SHA256 (RFC 5869) :
-   `HKDF(clé de la paire, sel = défi du téléphone ‖ défi du PC, « PontPlus 1 vers le PC » / « … vers le téléphone »)`.
+   `HKDF(clé de la paire, sel = défi du téléphone ‖ défi du PC, « BridgePlus 1 vers le PC » / « … vers le téléphone »)`.
 
 ## Les trames d'une session
 
@@ -56,16 +56,16 @@ Le PC envoie un `Ping` scellé toutes les 30 s et le téléphone répond `Pong`.
 | Appareil | Fichier | Protection |
 |---|---|---|
 | Téléphone | `appareils.bin` (stockage privé) | AES-256-GCM, clé du **Keystore Android** (ne quitte pas le matériel sécurisé) ; exclu des sauvegardes et des transferts |
-| PC | `%APPDATA%\PontPlus\appareils.bin` | **DPAPI** (liée au compte Windows) |
+| PC | `%APPDATA%\BridgePlus\appareils.bin` | **DPAPI** (liée au compte Windows) |
 
 Un fichier scellé avec une autre clé (autre compte, clé perdue) est mis de côté (`.illisible`), jamais écrasé sans trace ; il faut alors appairer de nouveau.
 
 ## Le réseau
 
-- Le PC **n'écoute que sur les interfaces du réseau de la maison** (reconnu par le nom du Wi-Fi ou l'adresse matérielle de la box), plus celles du réseau actuel le temps d'un appairage. Il ne répond à la découverte (`PONTPLUS?1`, UDP 47840) que pour une demande venue de ces sous-réseaux.
+- Le PC **n'écoute que sur les interfaces du réseau de la maison** (reconnu par le nom du Wi-Fi ou l'adresse matérielle de la box), plus celles du réseau actuel le temps d'un appairage. Il ne répond à la découverte (`BRIDGEPLUS?1`, UDP 47840) que pour une demande venue de ces sous-réseaux.
 - Le téléphone ne tient la liaison que sur le Wi-Fi de la maison ; ailleurs, le service s'arrête.
 - Ports : TCP 47841, UDP 47840. Ceux de KeePlus (47821, 47820) ne sont pas utilisés, et les deux applis cohabitent.
 
 ## Références
 
-AES-GCM (NIST SP 800-38D), HKDF (RFC 5869), Android Keystore, DPAPI. Paramètres dans le code : `core/src/main/kotlin/fr/maubin/pontplus/link/LinkCrypto.kt` et `LinkProtocol.kt`.
+AES-GCM (NIST SP 800-38D), HKDF (RFC 5869), Android Keystore, DPAPI. Paramètres dans le code : `core/src/main/kotlin/fr/maubin/bridgeplus/link/LinkCrypto.kt` et `LinkProtocol.kt`.

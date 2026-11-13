@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Aucune donnée de PontPlus ne part en sauvegarde ni vers un autre téléphone : les clés des paires
+<!-- Aucune donnée de BridgePlus ne part en sauvegarde ni vers un autre téléphone : les clés des paires
      sont scellées par le Keystore de ce téléphone et n'auraient de toute façon aucun sens ailleurs. -->
 <data-extraction-rules>
 	<cloud-backup>

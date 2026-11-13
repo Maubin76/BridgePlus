@@ -8,22 +8,22 @@ plugins {
 
 // Clé de signature des versions publiées : lue dans le gradle.properties de
 // l'utilisateur, dans local.properties (jamais versionnés) ou passée par la CI
-// (-Ppontplus.keystore=…). Absente : la version release est signée avec la clé
+// (-Pbridgeplus.keystore=…). Absente : la version release est signée avec la clé
 // de debug, et ne peut pas mettre à jour une appli signée autrement.
 val kLocal    = Properties().apply { rootProject.file("local.properties").takeIf { it.exists() }?.reader()?.use { load(it) } }	// local.properties
-val kSigning  = { inName: String -> (findProperty("pontplus.$inName") ?: kLocal.getProperty("pontplus.$inName"))?.toString() }	// réglage de signature
+val kSigning  = { inName: String -> (findProperty("bridgeplus.$inName") ?: kLocal.getProperty("bridgeplus.$inName"))?.toString() }	// réglage de signature
 val kKeystore = kSigning("keystore")?.let { file(it) }?.takeIf { it.exists() }		// fichier de la clé
-val kVersion  = rootProject.extra["pontVersion"].toString()							// version (nombre de commits)
+val kVersion  = rootProject.extra["bridgeVersion"].toString()							// version (nombre de commits)
 
 android {
-	namespace  = "fr.maubin.pontplus"
+	namespace  = "fr.maubin.bridgeplus"
 	compileSdk = 37
 
 	defaultConfig {
-		applicationId = "fr.maubin.pontplus"
+		applicationId = "fr.maubin.bridgeplus"
 		minSdk        = 36
 		targetSdk     = 37
-		versionCode   = rootProject.extra["pontVersionCode"] as Int
+		versionCode   = rootProject.extra["bridgeVersionCode"] as Int
 		versionName   = kVersion
 	}
 

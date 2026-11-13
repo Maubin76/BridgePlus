@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="doc/logo/pontplus-logo.png" alt="Logo PontPlus" width="112">
+  <img src="doc/logo/bridgeplus-logo.png" alt="Logo BridgePlus" width="112">
 </p>
 
-<h1 align="center">PontPlus</h1>
+<h1 align="center">BridgePlus</h1>
 
 <p align="center">
   Le téléphone et le PC, <b>reliés</b>.<br>
@@ -22,11 +22,11 @@
 
 ## En bref
 
-PontPlus fait passer une information du téléphone au PC, ou l'inverse, **en un geste et en moins de
+BridgePlus fait passer une information du téléphone au PC, ou l'inverse, **en un geste et en moins de
 deux secondes**.
 
 - **Chez vous, et seulement chez vous** : le téléphone et le PC se parlent directement par le
-  Wi-Fi de la maison. Hors de chez vous, PontPlus se met en veille.
+  Wi-Fi de la maison. Hors de chez vous, BridgePlus se met en veille.
 - **Appairé une fois, relié pour toujours** : on scanne un QR code, puis la liaison se rétablit
   toute seule dès que les deux appareils sont à la maison.
 - **Chiffré de bout en bout** : chaque paire a sa propre clé, qui passe par l'appareil photo et
@@ -48,8 +48,8 @@ deux secondes**.
 ## Installer
 
 - **Téléphone** : APK de la [dernière version](https://github.com/Maubin76/BridgePlus/releases/latest).
-- **PC** : zip portable de la même page ; dézippez-le où vous voulez et lancez `PontPlus.exe`.
-  Au premier appairage, Windows demande d'autoriser PontPlus sur le réseau : cochez seulement
+- **PC** : zip portable de la même page ; dézippez-le où vous voulez et lancez `BridgePlus.exe`.
+  Au premier appairage, Windows demande d'autoriser BridgePlus sur le réseau : cochez seulement
   **Réseaux privés**.
 
 Puis, sur le PC : **Appairer un téléphone**. Sur le téléphone : **Appareils › Appairer un PC**, et

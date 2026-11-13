@@ -27,6 +27,10 @@ kotlinx-coroutines-android             = { group = "org.jetbrains.kotlinx", name
 kotlinx-coroutines-core                = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-swing               = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
 compose-desktop-material3              = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "composeMaterial3" }
+compose-runtime                        = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "composeMultiplatform" }
+compose-foundation                     = { group = "org.jetbrains.compose.foundation", name = "foundation", version.ref = "composeMultiplatform" }
+compose-ui                             = { group = "org.jetbrains.compose.ui", name = "ui", version.ref = "composeMultiplatform" }
+compose-components-resources           = { group = "org.jetbrains.compose.components", name = "components-resources", version.ref = "composeMultiplatform" }
 kotlinx-serialization-json             = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 jna-platform                           = { group = "net.java.dev.jna", name = "jna-platform", version.ref = "jna" }
 zxing-core                             = { group = "com.google.zxing", name = "core", version.ref = "zxing" }

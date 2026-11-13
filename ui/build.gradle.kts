@@ -13,7 +13,7 @@ plugins {
 
 kotlin {
 	android {
-		namespace  = "fr.maubin.pontplus.ui"
+		namespace  = "fr.maubin.bridgeplus.ui"
 		compileSdk = 37
 		minSdk     = 36
 		androidResources {
@@ -32,16 +32,16 @@ kotlin {
 	sourceSets {
 		commonMain.dependencies {
 			api(project(":core"))
-			api(compose.runtime)
-			api(compose.foundation)
-			api(compose.ui)
+			api(libs.compose.runtime)
+			api(libs.compose.foundation)
+			api(libs.compose.ui)
 			api(libs.compose.desktop.material3)
-			implementation(compose.components.resources)
+			implementation(libs.compose.components.resources)
 		}
 	}
 }
 
 compose.resources {
 	publicResClass = true
-	packageOfResClass = "fr.maubin.pontplus.ui.resources"
+	packageOfResClass = "fr.maubin.bridgeplus.ui.resources"
 }

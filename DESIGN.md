@@ -1,5 +1,5 @@
 ---
-name: PontPlus
+name: BridgePlus
 description: Le téléphone et le PC reliés, dans la direction artistique de KeePlus : noir et argent, une brume grise qui tombe sur une grille fine, un pont flou en décor, l'état de la liaison en très grand.
 colors:
   void: "#050505"
@@ -72,9 +72,9 @@ radii:
   logo: "10dp"
 ---
 
-# PontPlus — direction artistique
+# BridgePlus — direction artistique
 
-PontPlus **reprend la direction artistique de KeePlus**, à l'identique : mêmes couleurs, mêmes polices, même décor, mêmes composants. Seuls changent l'emblème (un pont à la place du bouclier) et les écrans. Ce choix remplace la proposition initiale d'un thème clair et sombre avec un accent orange.
+BridgePlus **reprend la direction artistique de KeePlus**, à l'identique : mêmes couleurs, mêmes polices, même décor, mêmes composants. Seuls changent l'emblème (un pont à la place du bouclier) et les écrans. Ce choix remplace la proposition initiale d'un thème clair et sombre avec un accent orange.
 
 ## En une phrase
 Du noir profond et de l'argent : une brume grise descend du haut de l'écran sur une grille très fine, un grand pont flou flotte en arrière-plan, et l'état de la liaison s'écrit en grand, fin, en deux tons.

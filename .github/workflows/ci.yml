@@ -1,4 +1,4 @@
-# Intégration continue de PontPlus : à chaque push sur main, construit tout et lance
+# Intégration continue de BridgePlus : à chaque push sur main, construit tout et lance
 # toute la suite de tests (module commun, appli PC, appli Android, lint), puis publie
 # une version :
 #
@@ -7,7 +7,7 @@
 # - APK release (R8), signé avec la clé des secrets KEYSTORE_BASE64, KEY_ALIAS
 #   et KEY_PASSWORD. Sans eux : clé jetable de la CI et avertissement (un tel
 #   APK ne peut pas mettre à jour l'appli installée).
-# - Appli PC : dossier portable zippé avec PontPlus.exe et sa JVM (Windows).
+# - Appli PC : dossier portable zippé avec BridgePlus.exe et sa JVM (Windows).
 # - Release GitHub « vX.Y » avec les deux fichiers ; ses notes donnent la version du
 #   protocole de liaison (le téléphone et le PC doivent parler le même).
 #
@@ -131,23 +131,23 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]
           then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pontplus.jks"
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/bridgeplus.jks"
             ./gradlew :app:assembleRelease \
-              "-Ppontplus.keystore=$RUNNER_TEMP/pontplus.jks" \
-              "-Ppontplus.keyAlias=$KEY_ALIAS" \
-              "-Ppontplus.keyPassword=$KEY_PASSWORD"
-            rm "$RUNNER_TEMP/pontplus.jks"
+              "-Pbridgeplus.keystore=$RUNNER_TEMP/bridgeplus.jks" \
+              "-Pbridgeplus.keyAlias=$KEY_ALIAS" \
+              "-Pbridgeplus.keyPassword=$KEY_PASSWORD"
+            rm "$RUNNER_TEMP/bridgeplus.jks"
           else
             echo "::warning::Secrets KEYSTORE_BASE64, KEY_ALIAS et KEY_PASSWORD absents : APK signé avec une clé jetable, qui ne peut pas mettre à jour l'appli installée."
             ./gradlew :app:assembleRelease
           fi
-          mv app/build/outputs/apk/release/app-release.apk "PontPlus-${{ needs.version.outputs.version }}.apk"
+          mv app/build/outputs/apk/release/app-release.apk "BridgePlus-${{ needs.version.outputs.version }}.apk"
 
       - name: Garder l'APK
         uses: actions/upload-artifact@v7
         with:
           name: apk
-          path: PontPlus-*.apk
+          path: BridgePlus-*.apk
           retention-days: 7
 
   desktop:
@@ -183,14 +183,14 @@ jobs:
       - name: Contrôler le contenu du zip
         shell: bash
         run: |
-          mkdir -p controle && unzip -q desktop/build/distributions/PontPlus-*-windows.zip -d controle
-          test -f controle/PontPlus/PontPlus.exe || { echo "::error::PontPlus.exe absent du zip"; exit 1; }
+          mkdir -p controle && unzip -q desktop/build/distributions/BridgePlus-*-windows.zip -d controle
+          test -f controle/BridgePlus/BridgePlus.exe || { echo "::error::BridgePlus.exe absent du zip"; exit 1; }
 
       - name: Garder le zip
         uses: actions/upload-artifact@v7
         with:
           name: zip
-          path: desktop/build/distributions/PontPlus-*-windows.zip
+          path: desktop/build/distributions/BridgePlus-*-windows.zip
           retention-days: 7
 
   release:
@@ -220,10 +220,10 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
           SHA: ${{ needs.version.outputs.sha }}
         run: |
-          vProtocol=$(sed -n 's/.*kLinkProtocol *= *\([0-9][0-9]*\).*/\1/p' core/src/main/kotlin/fr/maubin/pontplus/link/LinkProtocol.kt)
-          printf '%s\n\n%s\n' "Protocole de liaison : $vProtocol" "Version $VERSION : APK Android et appli PC portable (dézipper, lancer PontPlus.exe)." > notes.md
+          vProtocol=$(sed -n 's/.*kLinkProtocol *= *\([0-9][0-9]*\).*/\1/p' core/src/main/kotlin/fr/maubin/bridgeplus/link/LinkProtocol.kt)
+          printf '%s\n\n%s\n' "Protocole de liaison : $vProtocol" "Version $VERSION : APK Android et appli PC portable (dézipper, lancer BridgePlus.exe)." > notes.md
           gh release create "v$VERSION" fichiers/* \
             --repo "${{ github.repository }}" \
             --target "$SHA" \
-            --title "PontPlus $VERSION" \
+            --title "BridgePlus $VERSION" \
             --notes-file notes.md

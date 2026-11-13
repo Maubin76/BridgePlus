@@ -34,7 +34,7 @@ dependencies {
 }
 
 // Version commune aux deux applis (nombre de commits) ; le paquet Windows veut trois nombres (1.12 → 1.12.0).
-val kVersion = rootProject.extra["pontVersion"].toString()							// version affichée
+val kVersion = rootProject.extra["bridgeVersion"].toString()							// version affichée
 val kPackage = (kVersion.split('.') + listOf("0", "0", "0")).take(3).joinToString(".")	// version du paquet
 
 // Version lue par l'appli au lancement (présentation aux téléphones) : ressource
@@ -56,36 +56,36 @@ tasks.withType<Test>().configureEach {
 
 compose.desktop {
 	application {
-		mainClass = "fr.maubin.pontplus.desktop.MainKt"
+		mainClass = "fr.maubin.bridgeplus.desktop.MainKt"
 		// JDK de l'empaquetage (jpackage) : celui de Gradle par défaut (CI) ; en local, si
 		// Gradle tourne sur le JDK d'Android Studio (sans jpackage) :
-		// ./gradlew :desktop:packageZip -Ppontplus.packagingJdk=C:/Java/current
-		findProperty("pontplus.packagingJdk")?.let { javaHome = it.toString() }
+		// ./gradlew :desktop:packageZip -Pbridgeplus.packagingJdk=C:/Java/current
+		findProperty("bridgeplus.packagingJdk")?.let { javaHome = it.toString() }
 
 		nativeDistributions {
 			targetFormats(TargetFormat.Msi)
-			packageName    = "PontPlus"
+			packageName    = "BridgePlus"
 			packageVersion = kPackage
 			description    = "Le téléphone et le PC, reliés par le Wi-Fi de la maison"
 			vendor         = "Mathieu Aubin"
 			modules("java.instrument", "jdk.unsupported", "java.xml", "jdk.localedata")
 
 			windows {
-				iconFile.set(project.file("icons/pontplus.ico"))
-				menuGroup   = "PontPlus"
+				iconFile.set(project.file("icons/bridgeplus.ico"))
+				menuGroup   = "BridgePlus"
 				upgradeUuid = "5b0f8f4e-6f0e-4c39-9d7e-2f3d1c4a9b61"
 			}
 		}
 	}
 }
 
-// Dossier portable zippé : PontPlus.exe et sa JVM, à dézipper n'importe où, sans
+// Dossier portable zippé : BridgePlus.exe et sa JVM, à dézipper n'importe où, sans
 // installation ni droits administrateur.
 tasks.register<Zip>("packageZip") {
 	group       = "distribution"
 	description = "Construit le dossier portable de l'appli PC et le zippe."
 	dependsOn("createDistributable")
 	from(layout.buildDirectory.dir("compose/binaries/main/app"))
-	archiveFileName.set("PontPlus-$kVersion-windows.zip")
+	archiveFileName.set("BridgePlus-$kVersion-windows.zip")
 	destinationDirectory.set(layout.buildDirectory.dir("distributions"))
 }

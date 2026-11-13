@@ -19,8 +19,8 @@ val kCommitCount: Int = runCatching {
 	}.standardOutput.asText.get().trim().toInt()
 }.getOrDefault(0)																	// nombre de commits
 
-extra["pontVersion"]     = "1.$kCommitCount"											// version affichée (Android et PC)
-extra["pontVersionCode"] = kCommitCount.coerceAtLeast(1)								// numéro interne Android
+extra["bridgeVersion"]     = "1.$kCommitCount"											// version affichée (Android et PC)
+extra["bridgeVersionCode"] = kCommitCount.coerceAtLeast(1)								// numéro interne Android
 
 // Zéro avertissement : tout avertissement du compilateur Kotlin fait échouer la construction.
 subprojects {

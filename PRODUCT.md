@@ -33,7 +33,7 @@ Aucune donnée : l'application démarre sans appareil appairé. Les écrans ne m
 
 ## Product Principles
 1. **Un geste, deux secondes** : chaque échange part en une action, sans écran intermédiaire.
-2. **Rien ne sort de la maison** : hors du réseau de la maison, PontPlus ne fait rien.
+2. **Rien ne sort de la maison** : hors du réseau de la maison, BridgePlus ne fait rien.
 3. **Jamais un secret qui fuit** : ce qui est marqué sensible ne circule pas et ne s'enregistre pas.
 4. **Invisible quand tout va bien** : la seule notification permanente dit « Relié à <PC> ».
 5. **Sobre en batterie** : la consommation sur une journée reste négligeable, et elle est mesurée.

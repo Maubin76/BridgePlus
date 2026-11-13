@@ -2,7 +2,7 @@
 <resources>
 	<!-- Thème de la fenêtre, sombre uniquement comme KeePlus : sans barre d'action ; Compose dessine
 	     tout le reste. -->
-	<style name="Theme.PontPlus" parent="android:Theme.Material.NoActionBar">
+	<style name="Theme.BridgePlus" parent="android:Theme.Material.NoActionBar">
 		<item name="android:windowBackground">@color/ground</item>
 		<item name="android:windowSplashScreenBackground">@color/ground</item>
 	</style>

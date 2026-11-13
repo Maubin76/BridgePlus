@@ -22,7 +22,7 @@ dependencyResolutionManagement {
 	}
 }
 
-// Projet BridgePlus : l'appli s'appelle PontPlus (Android et PC).
+// Projet BridgePlus : applis Android et PC.
 rootProject.name = "BridgePlus"
 include(":core")
 include(":ui")
