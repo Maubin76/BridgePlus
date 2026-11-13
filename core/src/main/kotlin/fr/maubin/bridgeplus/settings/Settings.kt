@@ -13,6 +13,7 @@ private val kSettingsJson = Json { ignoreUnknownKeys = true; encodeDefaults = tr
 	clipSend          : les copies de cet appareil partent d'elles-mêmes vers l'autre
 	                    (les gestes explicites, tuile et partage, envoient toujours)
 	clipReceive       : les textes reçus de l'autre appareil vont dans le presse-papiers
+	historyHotkey     : PC : raccourci global de la carte de l'historique (« Ctrl+Alt+V »)
 	launchAtStartup   : PC : BridgePlus démarre avec Windows
 	firewallExplained : PC : l'explication du pare-feu a été lue
 	updates           : nouvelle version cherchée au lancement
@@ -22,6 +23,7 @@ private val kSettingsJson = Json { ignoreUnknownKeys = true; encodeDefaults = tr
 data class BridgeSettings(
 	val clipSend          : Boolean = true,
 	val clipReceive       : Boolean = true,
+	val historyHotkey     : String  = "Ctrl+Alt+V",
 	val launchAtStartup   : Boolean = true,
 	val firewallExplained : Boolean = false,
 	val updates           : Boolean = true,

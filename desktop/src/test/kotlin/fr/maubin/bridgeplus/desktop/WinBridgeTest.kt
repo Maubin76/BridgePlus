@@ -6,6 +6,7 @@ import com.sun.jna.Pointer
 import com.sun.jna.win32.W32APIOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.util.concurrent.LinkedBlockingQueue
@@ -87,11 +88,12 @@ private interface TestMemory : Library
 /*
 	Presse-papiers réel de Windows : une copie ordinaire est lue, une copie
 	marquée sensible (KeePlus, gestionnaires de mots de passe) ne l'est pas,
-	un texte reçu y est placé sans repartir. Ce test remplace le contenu du
+	un texte reçu y est placé sans repartir ; le raccourci par défaut est
+	accepté par Windows. Ce test remplace le contenu du
 	presse-papiers (puis remet le texte d'origine) : il ne tourne que sous
 	Windows et sur demande (./gradlew :desktop:test -Pbridgeplus.testPressePapiers).
 */
-class WinClipboardTest
+class WinBridgeTest
 {
 	private val fClip   by lazy { Native.load("user32", TestClipboard::class.java, W32APIOptions.DEFAULT_OPTIONS) }	// presse-papiers
 	private val fMemory by lazy { Native.load("kernel32", TestMemory::class.java) }							// mémoire globale
@@ -102,10 +104,10 @@ class WinClipboardTest
 	@Test
 	fun readsPlainSkipsSensitive()
 	{
-		assumeTrue(WinClipboard.available && System.getProperty("bridgeplus.testPressePapiers") == "true")
+		assumeTrue(WinBridge.available && System.getProperty("bridgeplus.testPressePapiers") == "true")
 		val vBefore = readText()																	// contenu d'origine
 		val vSeen   = LinkedBlockingQueue<Pair<String?, Boolean>>()									// copies vues
-		val vBoard  = WinClipboard { vText, vSensitive -> vSeen.add(vText to vSensitive) }			// presse-papiers suivi
+		val vBoard  = WinBridge(fOnCopy = { vText, vSensitive -> vSeen.add(vText to vSensitive) })			// presse-papiers suivi
 		vBoard.start()
 		try
 		{
@@ -119,6 +121,8 @@ class WinClipboardTest
 			assertEquals(null to true, vSeen.poll(3, TimeUnit.SECONDS))
 			copy("historique permis", "CanIncludeInClipboardHistory" to 1)
 			assertEquals("historique permis" to false, vSeen.poll(3, TimeUnit.SECONDS))
+			val vHotkey = Hotkey.parse(kDefaultHotkey)												// raccourci par défaut
+			assertTrue("Ctrl+Alt+V refusé par Windows (déjà pris ?)", vBoard.register(vHotkey.modifiers, vHotkey.key))
 			vBoard.write("reçu du téléphone")
 			Thread.sleep(500)
 			assertEquals("reçu du téléphone", readText())

@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import fr.maubin.bridgeplus.clip.ClipRelay
 import fr.maubin.bridgeplus.clip.clipMessage
+import fr.maubin.bridgeplus.history.ClipHistory
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.discoverPcs
 import fr.maubin.bridgeplus.peers.PhoneLink
@@ -53,7 +54,12 @@ class BridgeApp : Application()
 		Relais du presse-papiers : envoi aux PC reliés, textes reçus placés
 		dans le presse-papiers (ou proposés par une notification).
 	*/
-	val clips: ClipRelay by lazy { ClipRelay({ link.sendAll(it) }, { writeClipboard(this, it) }, { fSettings.value }) }
+	val clips: ClipRelay by lazy { ClipRelay({ link.sendAll(it) }, { writeClipboard(this, it) }, { fSettings.value }, { vText, vOut, vPeers -> history.add(vText, vOut, vPeers) }) }
+
+	/*
+		Historique chiffré des échanges (clé du Keystore).
+	*/
+	val history: ClipHistory by lazy { ClipHistory(File(filesDir, "historique"), KeystoreBox) }
 
 	/*
 		Réglages en cours.
@@ -107,6 +113,30 @@ class BridgeApp : Application()
 	{
 		fSender.execute {
 			val vMessage = clipMessage(clips.offer(inText, inSensitive, inExplicit))				// issue en clair
+			Handler(Looper.getMainLooper()).post { inOnDone(vMessage) }
+		}
+	}
+
+	/*
+		Remet un élément de l'historique dans le presse-papiers (appli au
+		premier plan) ; il ne repart pas vers le PC. Rend le message à montrer
+		sur le fil de l'écran.
+		inId     : élément
+		inOnDone : message à montrer
+	*/
+	fun copyFromHistory(
+		inId     : String,
+		inOnDone : (String) -> Unit
+	)
+	{
+		fSender.execute {
+			val vText    = history.text(inId)															// texte complet
+			val vMessage = when
+			{
+				vText == null              -> "Cet élément n'existe plus."
+				vText.length > kMaxAndroidClip -> "Trop long pour le presse-papiers d'Android."
+				else                       -> { clips.markSeen(vText); if (writeClipboard(this, vText)) "Copié" else "Copie impossible." }
+			}																							// issue en clair
 			Handler(Looper.getMainLooper()).post { inOnDone(vMessage) }
 		}
 	}

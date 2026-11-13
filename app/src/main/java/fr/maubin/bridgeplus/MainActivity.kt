@@ -33,6 +33,7 @@ import fr.maubin.bridgeplus.ui.theme.BridgePlusTheme
 enum class PhoneScreen
 {
 	Home,																					// état de la liaison, derniers échanges
+	History,																				// historique du presse-papiers
 	Devices,																				// PC appairés, appairage
 	Settings																				// réseau de la maison, autorisations
 }
@@ -81,7 +82,7 @@ fun phoneLook(
 }
 
 /*
-	Activité principale : accueil, appareils, réglages. À chaque retour à
+	Activité principale : accueil, historique, appareils, réglages. À chaque retour à
 	l'écran, l'écoute des Wi-Fi est réinscrite et la liaison relancée si le
 	téléphone est à la maison (démarrage permis : l'appli est au premier
 	plan). Tant qu'elle est affichée, le presse-papiers part de lui-même vers
@@ -159,6 +160,7 @@ fun PhoneApp()
 	when (vScreen)
 	{
 		PhoneScreen.Home     -> HomeScreen(vState, phoneLook(vState, vNetwork, vOnHome), vResumes) { vScreen = it }
+		PhoneScreen.History  -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { HistoryScreen(vHome) }
 		PhoneScreen.Devices  -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { DevicesScreen(vState, vHome) }
 		PhoneScreen.Settings -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { SettingsScreen(vState, vNetwork, vResumes, vHome) }
 	}

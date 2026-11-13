@@ -5,7 +5,6 @@ import fr.maubin.bridgeplus.clip.ClipRelay
 import fr.maubin.bridgeplus.clip.clipMessage
 import fr.maubin.bridgeplus.clip.kEchoWindowMs
 import fr.maubin.bridgeplus.clip.kMaxClipBytes
-import fr.maubin.bridgeplus.clip.kRecentClips
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.settings.BridgeSettings
 import org.junit.Assert.assertEquals
@@ -16,7 +15,7 @@ import org.junit.Test
 /*
 	Relais du presse-papiers, sans réseau : contenus sensibles jamais
 	envoyés, taille maximale, réglages de chaque sens, garde contre l'écho,
-	derniers échanges.
+	échanges remis à l'historique.
 */
 class ClipTest
 {
@@ -25,16 +24,18 @@ class ClipTest
 	private var fPeers    = listOf("Bureau")													// appareils reliés
 	private val fSent     = mutableListOf<LinkMessage.Clip>()								// messages envoyés
 	private val fApplied  = mutableListOf<String>()											// textes placés dans le presse-papiers
+	private val fRecorded = mutableListOf<Pair<String, Boolean>>()							// échanges remis à l'historique
 	private val fRelay    = ClipRelay(
 		fSend     = { vMessage -> (vMessage as? LinkMessage.Clip)?.let { fSent += it }; fPeers },
 		fApply    = { fApplied += it; true },
 		fSettings = { fSettings },
+		fRecord   = { vText, vOut, _ -> fRecorded += vText to vOut },
 		fNow      = { fNow }
 	)																							// relais
 
 	/*
-		Copie ordinaire : envoyée à tous les appareils reliés, retenue dans les
-		derniers échanges.
+		Copie ordinaire : envoyée à tous les appareils reliés, remise à
+		l'historique.
 	*/
 	@Test
 	fun sendsCopy()
@@ -43,12 +44,12 @@ class ClipTest
 		assertEquals(ClipOutcome.Sent, vResult.outcome)
 		assertEquals(listOf("Bureau"), vResult.peers)
 		assertEquals("bonjour", fSent.single().text)
-		assertTrue(fRelay.recent.value.single().outgoing)
+		assertEquals(listOf("bonjour" to true), fRecorded)
 	}
 
 	/*
 		Contenu marqué sensible : jamais envoyé, même par un geste explicite,
-		et jamais retenu.
+		et jamais remis à l'historique.
 	*/
 	@Test
 	fun neverSendsSensitive()
@@ -56,7 +57,7 @@ class ClipTest
 		assertEquals(ClipOutcome.Sensitive, fRelay.offer("mot-de-passe", true).outcome)
 		assertEquals(ClipOutcome.Sensitive, fRelay.offer("mot-de-passe", true, inExplicit = true).outcome)
 		assertTrue(fSent.isEmpty())
-		assertTrue(fRelay.recent.value.isEmpty())
+		assertTrue(fRecorded.isEmpty())
 	}
 
 	/*
@@ -118,16 +119,17 @@ class ClipTest
 	}
 
 	/*
-		Derniers échanges : les plus récents d'abord, nombre limité, effaçables.
+		Texte recopié depuis l'historique : il ne repart pas (écho), sauf par
+		un geste explicite ; un texte reçu est remis à l'historique.
 	*/
 	@Test
-	fun recentList()
+	fun historyCopyIsNotResent()
 	{
-		repeat(kRecentClips + 5) { fRelay.offer("texte $it", false) }
-		assertEquals(kRecentClips, fRelay.recent.value.size)
-		assertEquals("texte ${kRecentClips + 4}", fRelay.recent.value.first().text)
-		fRelay.clear()
-		assertTrue(fRelay.recent.value.isEmpty())
+		fRelay.markSeen("ancien texte")
+		assertEquals(ClipOutcome.Echo, fRelay.offer("ancien texte", false).outcome)
+		assertEquals(ClipOutcome.Sent, fRelay.offer("ancien texte", false, inExplicit = true).outcome)
+		fRelay.receive("Bureau", LinkMessage.Clip("2", "du PC", fNow))
+		assertEquals("du PC" to false, fRecorded.last())
 	}
 
 	/*

@@ -17,6 +17,10 @@ private const val kHwndMessage       = -3											// HWND_MESSAGE : fenêtre d
 private const val kWmClipboardUpdate = 0x031D										// WM_CLIPBOARDUPDATE : le presse-papiers a changé
 private const val kWmApp             = 0x8000										// WM_APP : messages de BridgePlus
 private const val kMsgWrite          = kWmApp + 1									// écrire les textes en attente
+private const val kMsgRegister       = kWmApp + 2									// changer le raccourci global
+private const val kWmHotkey          = 0x0312										// WM_HOTKEY : raccourci global appuyé
+private const val kHotkeyId          = 0x4250										// identifiant du raccourci global
+private const val kModNoRepeat       = 0x4000										// MOD_NOREPEAT : pas de répétition en maintenant les touches
 private const val kCfUnicodeText     = 13											// CF_UNICODETEXT
 private const val kGmemMoveable      = 0x0002										// GMEM_MOVEABLE
 
@@ -117,9 +121,11 @@ private interface GlobalMemory : Library
 }
 
 /*
-	Presse-papiers de Windows, sur un fil dédié qui fait tourner la boucle de
-	messages d'une fenêtre invisible abonnée aux changements
-	(AddClipboardFormatListener). À chaque copie d'une autre appli, les
+	Pont avec Windows, sur un fil dédié qui fait tourner la boucle de
+	messages d'une fenêtre invisible (comme celui de KeePlus) :
+	- raccourci clavier global de la carte de l'historique (RegisterHotKey) ;
+	- presse-papiers, abonné aux changements (AddClipboardFormatListener).
+	À chaque copie d'une autre appli, les
 	marques « sensible » sont lues **avant** le texte :
 	- ExcludeClipboardContentFromMonitorProcessing présent ;
 	- CanIncludeInClipboardHistory ou CanUploadToCloudClipboard à 0 ;
@@ -128,10 +134,14 @@ private interface GlobalMemory : Library
 	rendu différé, et les lire consommerait sa séquence de collage. Les copies
 	de BridgePlus lui-même (textes reçus) sont ignorées.
 	Hors Windows, rien n'est disponible (available faux).
-	fOnCopy : copie d'une autre appli : texte (null sans texte) et marque
-	          « sensible » ; appelé sur un fil à part
+	fOnCopy   : copie d'une autre appli : texte (null sans texte) et marque
+	            « sensible » ; appelé sur un fil à part
+	fOnHotkey : raccourci global appuyé ; appelé sur le fil de Windows
 */
-class WinClipboard(private val fOnCopy: (String?, Boolean) -> Unit)
+class WinBridge(
+	private val fOnCopy   : (String?, Boolean) -> Unit,
+	private val fOnHotkey : () -> Unit = {}
+)
 {
 	private val fUser    = User32.INSTANCE													// fonctions des fenêtres
 	private val fClip    = Native.load("user32", ClipboardApi::class.java, W32APIOptions.DEFAULT_OPTIONS)	// presse-papiers
@@ -144,6 +154,9 @@ class WinClipboard(private val fOnCopy: (String?, Boolean) -> Unit)
 	private var fHistory      = 0																// format CanIncludeInClipboardHistory
 	private var fCloud        = 0																// format CanUploadToCloudClipboard
 	private var fViewerIgnore = 0																// format Clipboard Viewer Ignore
+	@Volatile private var fPendingKey : Pair<Int, Int>? = null								// raccourci à enregistrer (modificateurs, touche)
+	@Volatile private var fHotkeyOk   = false													// dernier enregistrement accepté par Windows
+	@Volatile private var fDone       : CountDownLatch? = null								// fin de l'enregistrement en cours
 
 	/*
 		Démarre le fil de Windows et attend la fenêtre (2 s au plus).
@@ -151,7 +164,7 @@ class WinClipboard(private val fOnCopy: (String?, Boolean) -> Unit)
 	fun start()
 	{
 		val vReady = CountDownLatch(1)															// fenêtre créée
-		Thread({ loop(vReady) }, "BridgePlus-presse-papiers").apply { isDaemon = true }.start()
+		Thread({ loop(vReady) }, "BridgePlus-Windows").apply { isDaemon = true }.start()
 		vReady.await(2, TimeUnit.SECONDS)
 	}
 
@@ -166,6 +179,27 @@ class WinClipboard(private val fOnCopy: (String?, Boolean) -> Unit)
 		fPending.add(inText)
 		fUser.PostMessage(vHwnd, kMsgWrite, WinDef.WPARAM(0), WinDef.LPARAM(0))
 		return true
+	}
+
+	/*
+		Enregistre le raccourci global (remplace le précédent) ; rend faux s'il
+		est déjà pris par une autre appli, ou sans fenêtre.
+		inModifiers : modificateurs Windows (MOD_CONTROL…)
+		inKey       : touche (code virtuel)
+	*/
+	fun register(
+		inModifiers : Int,
+		inKey       : Int
+	): Boolean
+	{
+		val vHwnd = fHwnd ?: return false
+		fPendingKey = inModifiers to inKey
+		fHotkeyOk   = false
+		val vDone   = CountDownLatch(1)															// enregistrement fait
+		fDone       = vDone
+		fUser.PostMessage(vHwnd, kMsgRegister, WinDef.WPARAM(0), WinDef.LPARAM(0))
+		vDone.await(2, TimeUnit.SECONDS)
+		return fHotkeyOk
 	}
 
 	/*
@@ -184,10 +218,10 @@ class WinClipboard(private val fOnCopy: (String?, Boolean) -> Unit)
 		val vClass = WinUser.WNDCLASSEX().apply {
 			hInstance     = Kernel32.INSTANCE.GetModuleHandle(null)
 			lpfnWndProc   = vProc
-			lpszClassName = "BridgePlusPressePapiers"
+			lpszClassName = "BridgePlusPont"
 		}																						// classe de la fenêtre
 		fUser.RegisterClassEx(vClass)
-		val vHwnd  = fUser.CreateWindowEx(0, "BridgePlusPressePapiers", "BridgePlus", 0, 0, 0, 0, 0, WinDef.HWND(Pointer.createConstant(kHwndMessage.toLong())), null, vClass.hInstance, null)	// fenêtre
+		val vHwnd  = fUser.CreateWindowEx(0, "BridgePlusPont", "BridgePlus", 0, 0, 0, 0, 0, WinDef.HWND(Pointer.createConstant(kHwndMessage.toLong())), null, vClass.hInstance, null)	// fenêtre
 		if (vHwnd != null && fClip.AddClipboardFormatListener(vHwnd)) fHwnd = vHwnd
 		inReady.countDown()
 		if (fHwnd == null) return
@@ -217,8 +251,22 @@ class WinClipboard(private val fOnCopy: (String?, Boolean) -> Unit)
 		{
 			kWmClipboardUpdate -> { readNow(inHwnd); return WinDef.LRESULT(0) }
 			kMsgWrite          -> { writeNow(inHwnd); return WinDef.LRESULT(0) }
+			kMsgRegister       -> { registerNow(inHwnd); return WinDef.LRESULT(0) }
+			kWmHotkey          -> { if (inW.toInt() == kHotkeyId) runCatching { fOnHotkey() }; return WinDef.LRESULT(0) }
 		}
 		return fUser.DefWindowProc(inHwnd, inMsg, inW, inL)
+	}
+
+	/*
+		Enregistre le raccourci demandé (sur le fil de Windows).
+		inHwnd : fenêtre invisible
+	*/
+	private fun registerNow(inHwnd: WinDef.HWND)
+	{
+		fUser.UnregisterHotKey(inHwnd.pointer, kHotkeyId)
+		val vKey  = fPendingKey																	// raccourci demandé
+		fHotkeyOk = vKey != null && fUser.RegisterHotKey(inHwnd, kHotkeyId, vKey.first or kModNoRepeat, vKey.second)
+		fDone?.countDown()
 	}
 
 	/*
@@ -325,7 +373,7 @@ class WinClipboard(private val fOnCopy: (String?, Boolean) -> Unit)
 	companion object
 	{
 		/*
-			Vrai sous Windows : le presse-papiers peut être suivi.
+			Vrai sous Windows : le pont peut fonctionner.
 		*/
 		val available: Boolean = System.getProperty("os.name").orEmpty().startsWith("Windows")
 	}

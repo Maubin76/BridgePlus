@@ -40,7 +40,7 @@ deux secondes**.
 |---|---|---|
 | 1 | Modules, thème, liaison chiffrée, appairage par QR code, connexion permanente avec reconnexion | ✅ |
 | 2 | Presse-papiers dans les deux sens, contenus sensibles exclus | ✅ (branche `develop`) |
-| 3 | Historique chiffré, carte du PC (Ctrl+Alt+V) | à venir |
+| 3 | Historique chiffré, carte du PC (Ctrl+Alt+V) | ✅ (branche `develop`) |
 | 4 | Envoi de fichiers dans les deux sens | à venir |
 | 5 | Notifications du téléphone sur le PC | à venir |
 | 6 | Sonnerie, batterie, liens, assistant de premier lancement | à venir |
@@ -56,6 +56,19 @@ deux secondes**.
 - **Jamais un secret** : ce que KeePlus, KeePass ou un autre gestionnaire marque comme sensible
   n'est ni lu ni envoyé.
 - Texte seul, 1 Mo au plus. Chaque sens se désactive dans les réglages.
+
+## L'historique
+
+Les 50 derniers textes échangés, et ceux que vous épinglez, sont gardés **chiffrés** sur chaque
+appareil (Keystore sur le téléphone, DPAPI sur le PC).
+
+- **Sur le PC** : `Ctrl+Alt+V` (modifiable) fait descendre une carte en haut de l'écran, depuis
+  n'importe quelle appli. Tapez pour chercher, flèches et Entrée pour copier : la carte remonte et
+  vous pouvez coller aussitôt. Une épingle garde un élément, une croix le supprime.
+- **Sur le téléphone** : l'icône Historique de l'accueil, avec la même recherche ; toucher un
+  élément le copie.
+- Un élément recopié depuis l'historique ne repart pas vers l'autre appareil. « Tout effacer »
+  vide l'historique de l'appareil, épingles comprises.
 
 ## Installer
 

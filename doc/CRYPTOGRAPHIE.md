@@ -49,8 +49,7 @@ Le presse-papiers circule dans ces trames, comme message `presse-papiers` (texte
 Un contenu marqué sensible n'est **jamais lu** : sur le PC, les marques
 (`ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory` ou
 `CanUploadToCloudClipboard` à 0, `Clipboard Viewer Ignore`) sont vérifiées avant le texte ; sur
-Android, `ClipDescription.EXTRA_IS_SENSITIVE`. Aucun texte échangé n'est écrit dans un journal ;
-les derniers échanges ne vivent qu'en mémoire (l'historique chiffré viendra à l'étape 3).
+Android, `ClipDescription.EXTRA_IS_SENSITIVE`. Aucun texte échangé n'est écrit dans un journal.
 
 **En clair sur le réseau** : seulement la présentation (`hello`, nom et version de l'appareil, pour le diagnostic) et les refus (`error`). Rien d'autre.
 
@@ -64,8 +63,9 @@ Le PC envoie un `Ping` scellé toutes les 30 s et le téléphone répond `Pong`.
 |---|---|---|
 | Téléphone | `appareils.bin` (stockage privé) | AES-256-GCM, clé du **Keystore Android** (ne quitte pas le matériel sécurisé) ; exclu des sauvegardes et des transferts |
 | PC | `%APPDATA%\BridgePlus\appareils.bin` | **DPAPI** (liée au compte Windows) |
+| Téléphone et PC | `historique/index.bin` et un fichier par texte | même coffret : index (aperçus, dates, épingles) et textes complets scellés séparément, pour ne jamais réécrire tout l'historique |
 
-Un fichier scellé avec une autre clé (autre compte, clé perdue) est mis de côté (`.illisible`), jamais écrasé sans trace ; il faut alors appairer de nouveau.
+Un fichier scellé avec une autre clé (autre compte, clé perdue) est mis de côté (`.illisible`), jamais écrasé sans trace ; il faut alors appairer de nouveau (l'historique, lui, repart vide).
 
 ## Le réseau
 

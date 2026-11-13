@@ -4,31 +4,10 @@ import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.randomBytes
 import fr.maubin.bridgeplus.link.toBase64
 import fr.maubin.bridgeplus.settings.BridgeSettings
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import java.security.MessageDigest
 
 const val kMaxClipBytes   = 1024 * 1024											// taille maximale d'un texte (1 Mo en UTF-8)
 const val kEchoWindowMs   = 5L * 60 * 1000										// durée pendant laquelle un texte échangé n'est pas renvoyé
-const val kRecentClips    = 20													// derniers échanges gardés en mémoire
-
-/*
-	Échange du presse-papiers, pour la liste des derniers échanges (en
-	mémoire seulement à cette étape ; l'historique chiffré viendra ensuite).
-	id       : identifiant de l'envoi
-	text     : texte
-	outgoing : vrai pour un texte envoyé, faux pour un texte reçu
-	peers    : appareils concernés (destinataires, ou expéditeur)
-	at       : date (ms)
-*/
-data class ClipEntry(
-	val id       : String,
-	val text     : String,
-	val outgoing : Boolean,
-	val peers    : List<String>,
-	val at       : Long
-)
 
 /*
 	Issue d'une copie proposée à l'envoi.
@@ -63,27 +42,24 @@ data class ClipResult(
 	presse-papiers les textes reçus. Un texte échangé dans les cinq dernières
 	minutes n'est pas renvoyé : poser un texte reçu dans le presse-papiers
 	déclenche une « copie » locale qui, sans cette garde, repartirait aussitôt
-	(écho). Le texte n'est jamais écrit dans un journal.
+	(écho). Chaque échange est remis à l'historique (chiffré) ; le texte
+	n'est jamais écrit dans un journal.
 	fSend     : envoie un message à tous les appareils reliés ; rend leurs noms
 	fApply    : place un texte reçu dans le presse-papiers local ; rend faux si
 	            le système refuse (le téléphone propose alors une notification)
 	fSettings : réglages en cours
+	fRecord   : échange à retenir (texte, vrai pour un envoi, appareils)
 	fNow      : horloge (ms)
 */
 class ClipRelay(
 	private val fSend     : (LinkMessage) -> List<String>,
 	private val fApply    : (String) -> Boolean,
 	private val fSettings : () -> BridgeSettings,
+	private val fRecord   : (String, Boolean, List<String>) -> Unit = { _, _, _ -> },
 	private val fNow      : () -> Long = System::currentTimeMillis
 )
 {
-	private val fSeen   = LinkedHashMap<String, Long>()								// empreintes des textes échangés et leur date
-	private val fRecent = MutableStateFlow<List<ClipEntry>>(emptyList())				// derniers échanges
-
-	/*
-		Derniers échanges, du plus récent au plus ancien.
-	*/
-	val recent: StateFlow<List<ClipEntry>> = fRecent
+	private val fSeen = LinkedHashMap<String, Long>()									// empreintes des textes échangés et leur date
 
 	/*
 		Propose une copie locale à l'envoi.
@@ -110,7 +86,7 @@ class ClipRelay(
 		val vPeers = fSend(vClip)																	// appareils joints
 		if (vPeers.isEmpty()) return ClipResult(ClipOutcome.NoPeer, bytes = vBytes)
 		fSeen[vPrint] = fNow()
-		remember(ClipEntry(vClip.id, inText, true, vPeers, vClip.at))
+		runCatching { fRecord(inText, true, vPeers) }
 		return ClipResult(ClipOutcome.Sent, vPeers, vBytes)
 	}
 
@@ -129,15 +105,20 @@ class ClipRelay(
 		if (!fSettings().clipReceive) return false
 		if (inClip.text.isEmpty() || inClip.text.toByteArray(Charsets.UTF_8).size > kMaxClipBytes) return false
 		fSeen[fingerprint(inClip.text)] = fNow()
-		remember(ClipEntry(inClip.id, inClip.text, false, listOf(inPeer), fNow()))
+		runCatching { fRecord(inClip.text, false, listOf(inPeer)) }
 		return fApply(inClip.text)
 	}
 
 	/*
-		Oublie les derniers échanges (rien n'est gardé sur le disque).
+		Texte remis dans le presse-papiers local depuis l'historique : déjà
+		échangé, il ne doit pas repartir vers l'autre appareil.
+		inText : texte
 	*/
 	@Synchronized
-	fun clear() = fRecent.update { emptyList() }
+	fun markSeen(inText: String)
+	{
+		fSeen[fingerprint(inText)] = fNow()
+	}
 
 	/*
 		Vrai si ce texte a été échangé il y a moins de cinq minutes.
@@ -149,12 +130,6 @@ class ClipRelay(
 		fSeen.entries.removeIf { vNow - it.value > kEchoWindowMs }
 		return inPrint in fSeen
 	}
-
-	/*
-		Ajoute un échange en tête des derniers échanges.
-		inEntry : échange
-	*/
-	private fun remember(inEntry: ClipEntry) = fRecent.update { (listOf(inEntry) + it).take(kRecentClips) }
 
 	/*
 		Empreinte d'un texte (SHA-256), pour reconnaître un écho sans garder

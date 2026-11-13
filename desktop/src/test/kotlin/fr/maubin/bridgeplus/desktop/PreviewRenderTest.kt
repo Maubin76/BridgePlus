@@ -8,7 +8,13 @@ import fr.maubin.bridgeplus.link.LocalNetwork
 import fr.maubin.bridgeplus.link.NetworkId
 import fr.maubin.bridgeplus.link.newLinkKey
 import fr.maubin.bridgeplus.store.KeyBox
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import fr.maubin.bridgeplus.ui.components.IconAction
 import fr.maubin.bridgeplus.ui.components.LinkHero
 import fr.maubin.bridgeplus.ui.components.LinkLook
@@ -82,5 +88,32 @@ class PreviewRenderTest
 				File(vOut, "telephone-accueil-$vName.png").writeBytes(vScene.render(1_000_000_000L).encodeToData(EncodedImageFormat.PNG)!!.bytes)
 			}
 		}
+	}
+
+	/*
+		Rend la carte de l'historique, remplie d'exemples (un épinglé, des
+		envois et des réceptions).
+	*/
+	@Test
+	fun renderHistoryCard()
+	{
+		val vNetworks = { listOf(LocalNetwork(NetworkId.wifi("Maison")!!, listOf(LocalAddress("127.0.0.1", 8)))) }	// réseau simulé
+		val vApp      = DesktopApp(fTemp.root, KeyBox(newLinkKey()), vNetworks)				// appli
+		vApp.history.add("https://www.sncf-connect.com/billet/7Q4K2M", false, listOf("Pixel"))
+		vApp.history.add("Réunion déplacée à 14 h 30, salle Garonne", true, listOf("Pixel"))
+		vApp.history.add("12 rue des Étés, 69007 Lyon", false, listOf("Pixel")).also { vApp.history.pin(it.id, true) }
+		vApp.history.add("Code du portail : voir le carnet", true, listOf("Pixel"))
+		val vOut      = File("build/captures").apply { mkdirs() }								// dossier des rendus
+		ImageComposeScene(620, 520, Density(1f)) {
+			BridgePlusTheme {
+				Box(Modifier.fillMaxSize().background(Color(0xFF3A4A5A))) {
+					Box(Modifier.align(Alignment.TopCenter)) { NotchFrame { HistoryCardContent(vApp, {}, {}) } }
+				}
+			}
+		}.use { vScene ->
+			vScene.render()
+			File(vOut, "carte-historique.png").writeBytes(vScene.render(1_000_000_000L).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+		}
+		vApp.stop()
 	}
 }

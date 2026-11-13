@@ -1,6 +1,7 @@
 package fr.maubin.bridgeplus.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,9 +26,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import fr.maubin.bridgeplus.ui.icons.LineIcons
@@ -241,4 +245,72 @@ fun ClipRow(
 			OneLine("${if (inOutgoing) "Vers" else "De"} $inPeers · $inWhen", vType.bodySmall)
 		}
 	}
+}
+
+/*
+	Ligne de l'historique : sens, texte sur deux lignes au plus, appareil et
+	moment ; épingle et croix à droite. Toucher (ou cliquer) la ligne copie
+	l'élément. La ligne choisie au clavier (carte du PC) est surlignée.
+	inOutgoing : vrai pour un envoi
+	inText     : aperçu du texte
+	inPeers    : appareils concernés
+	inWhen     : moment en clair
+	inPinned   : élément épinglé
+	inSelected : ligne choisie au clavier
+	inOnCopy   : copier l'élément
+	inOnPin    : épingler ou désépingler
+	inOnDelete : supprimer
+*/
+@Composable
+fun HistoryRow(
+	inOutgoing : Boolean,
+	inText     : String,
+	inPeers    : String,
+	inWhen     : String,
+	inPinned   : Boolean,
+	inSelected : Boolean,
+	inOnCopy   : () -> Unit,
+	inOnPin    : () -> Unit,
+	inOnDelete : () -> Unit
+)
+{
+	val vType = bridgeType()																	// styles de texte
+	Row(
+		Modifier
+			.fillMaxWidth()
+			.clip(RoundedCornerShape(14.dp))
+			.background(if (inSelected) BridgeColors.surfaceHigh else Color.Transparent)
+			.clickable(role = Role.Button, onClickLabel = "Copier", onClick = inOnCopy)
+			.padding(start = 8.dp, top = 6.dp, bottom = 6.dp),
+		verticalAlignment = Alignment.CenterVertically
+	) {
+		Icon(if (inOutgoing) LineIcons.Sent else LineIcons.Received, contentDescription = if (inOutgoing) "Envoyé" else "Reçu", tint = BridgeColors.textFaint, modifier = Modifier.size(18.dp))
+		Spacer(Modifier.width(12.dp))
+		Column(Modifier.weight(1f)) {
+			BasicText(inText.replace('\n', ' ').trim(), style = vType.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+			OneLine("${if (inOutgoing) "Vers" else "De"} $inPeers · $inWhen", vType.bodySmall)
+		}
+		IconAction(LineIcons.Pin, if (inPinned) "Désépingler" else "Épingler", inOnPin, inTint = if (inPinned) BridgeColors.text else BridgeColors.textFaint)
+		IconAction(LineIcons.Close, "Supprimer", inOnDelete)
+	}
+}
+
+/*
+	Confirmation avant d'effacer tout l'historique, épingles comprises.
+	inOnClear   : effacement confirmé
+	inOnDismiss : annulation
+*/
+@Composable
+fun ClearHistoryDialog(
+	inOnClear   : () -> Unit,
+	inOnDismiss : () -> Unit
+)
+{
+	ConfirmDialog(
+		inTitle     = "Tout effacer ?",
+		inText      = "Tout l'historique de cet appareil sera effacé, éléments épinglés compris. L'autre appareil garde le sien.",
+		inConfirm   = "Tout effacer",
+		inOnDismiss = inOnDismiss,
+		inOnConfirm = inOnClear
+	)
 }

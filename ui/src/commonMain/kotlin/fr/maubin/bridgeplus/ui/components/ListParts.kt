@@ -2,6 +2,17 @@ package fr.maubin.bridgeplus.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import fr.maubin.bridgeplus.ui.icons.LineIcons
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,6 +59,41 @@ fun IconAction(
 			.clickable(role = Role.Button, onClick = inOnClick)
 			.padding(11.dp * vSize),
 		tint = inTint
+	)
+}
+
+/*
+	Barre de recherche : pilule, loupe à gauche, croix pour vider.
+	inState       : texte cherché
+	inModifier    : modificateur
+	inPlaceholder : indication
+*/
+@Composable
+fun SearchField(
+	inState       : TextFieldState,
+	inModifier    : Modifier = Modifier,
+	inPlaceholder : String   = "Rechercher"
+)
+{
+	BasicTextField(
+		state       = inState,
+		modifier    = inModifier.fillMaxWidth(),
+		textStyle   = bridgeType().body,
+		cursorBrush = SolidColor(BridgeColors.text),
+		lineLimits  = TextFieldLineLimits.SingleLine,
+		decorator   = { vInner ->
+			Row(
+				Modifier.fillMaxWidth().height(48.dp).clip(kPill).background(BridgeColors.surfaceHigh).padding(start = 14.dp, end = 4.dp),
+				verticalAlignment = Alignment.CenterVertically
+			) {
+				Icon(LineIcons.Search, null, Modifier.size(20.dp), tint = BridgeColors.textMuted)
+				Box(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+					if (inState.text.isEmpty()) BasicText(inPlaceholder, style = bridgeType().body.copy(color = BridgeColors.textFaint))
+					vInner()
+				}
+				if (inState.text.isNotEmpty()) IconAction(LineIcons.Close, "Effacer la recherche", { inState.clearText() })
+			}
+		}
 	)
 }
 

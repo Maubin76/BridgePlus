@@ -2,6 +2,7 @@ package fr.maubin.bridgeplus.desktop
 
 import fr.maubin.bridgeplus.clip.ClipOutcome
 import fr.maubin.bridgeplus.clip.ClipRelay
+import fr.maubin.bridgeplus.history.ClipHistory
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.LocalNetwork
 import fr.maubin.bridgeplus.peers.PcLink
@@ -95,7 +96,8 @@ fun pcLook(inState: PcLinkState): PcLook
 }
 
 /*
-	Appli PC : liaison avec les téléphones, presse-papiers partagé, réglages,
+	Appli PC : liaison avec les téléphones, presse-papiers partagé et son
+	historique chiffré, raccourci de la carte, réglages,
 	et surveillance du réseau (lecture rapide des adresses toutes les 5 s ;
 	relecture complète des réseaux à chaque changement, et au moins toutes
 	les minutes).
@@ -114,7 +116,14 @@ class DesktopApp(
 	private val fSettings = MutableStateFlow(fStore.load())									// réglages
 
 	private val fNotices  = MutableSharedFlow<String>(extraBufferCapacity = 8)				// messages pour l'utilisateur (notifications)
-	private var fBoard    : WinClipboard? = null											// presse-papiers de Windows ; null ailleurs
+	private var fBoard    : WinBridge? = null											// pont avec Windows (presse-papiers, raccourci) ; null ailleurs
+	private val fHotkeyOk = MutableStateFlow(true)											// raccourci accepté par Windows
+	private val fPresses  = MutableSharedFlow<ActiveWindow>(extraBufferCapacity = 4)		// appuis sur le raccourci (fenêtre active à ce moment)
+
+	/*
+		Historique chiffré des échanges (DPAPI).
+	*/
+	val history = ClipHistory(File(fDir, "historique"), fBox)
 
 	/*
 		Liaison avec les téléphones ; les textes reçus vont au relais du
@@ -128,7 +137,23 @@ class DesktopApp(
 		Relais du presse-papiers : copies du PC vers les téléphones reliés,
 		textes reçus placés dans le presse-papiers de Windows.
 	*/
-	val clips: ClipRelay = ClipRelay(link::sendAll, { fBoard?.write(it) ?: false }, { fSettings.value })
+	val clips: ClipRelay = ClipRelay(link::sendAll, { fBoard?.write(it) ?: false }, { fSettings.value }, { vText, vOut, vPeers -> history.add(vText, vOut, vPeers) })
+
+	/*
+		Appuis sur le raccourci de la carte, avec la fenêtre active à ce
+		moment (la carte descend sur son écran, puis lui rend la main).
+	*/
+	val hotkeyPresses: SharedFlow<ActiveWindow> = fPresses
+
+	/*
+		Vrai si Windows a accepté le raccourci réglé.
+	*/
+	val hotkeyOk: StateFlow<Boolean> = fHotkeyOk
+
+	/*
+		Vrai si le raccourci peut être réglé (Windows).
+	*/
+	val hasHotkey: Boolean get() = WinBridge.available
 
 	/*
 		Messages à montrer à l'utilisateur dans une notification (texte trop
@@ -146,7 +171,11 @@ class DesktopApp(
 	*/
 	fun start()
 	{
-		if (WinClipboard.available) fBoard = WinClipboard(::copied).also { it.start() }
+		if (WinBridge.available)
+		{
+			fBoard = WinBridge(::copied) { ActiveWindow.current().takeIf { !it.isOwn }?.let { fPresses.tryEmit(it) } }.also { it.start() }
+			fScope.launch { registerHotkey() }
+		}
 		fScope.launch {
 			var vPrint = ""																	// dernière empreinte des adresses
 			var vLast  = 0L																	// dernière relecture complète
@@ -163,6 +192,38 @@ class DesktopApp(
 				delay(kQuickCheckMs)
 			}
 		}
+	}
+
+	/*
+		Enregistre auprès de Windows le raccourci réglé ; note s'il a été
+		accepté.
+	*/
+	fun registerHotkey()
+	{
+		val vHotkey = Hotkey.parse(fSettings.value.historyHotkey)										// raccourci réglé
+		fHotkeyOk.value = fBoard?.register(vHotkey.modifiers, vHotkey.key) ?: true
+	}
+
+	/*
+		Change le raccourci de la carte et l'enregistre auprès de Windows.
+		inSpec : raccourci (texte des réglages, « Ctrl+Alt+V »)
+	*/
+	fun setHotkey(inSpec: String)
+	{
+		updateSettings { it.copy(historyHotkey = inSpec) }
+		fScope.launch { registerHotkey() }
+	}
+
+	/*
+		Remet un élément de l'historique dans le presse-papiers ; il ne repart
+		pas vers le téléphone (déjà échangé). Rend faux s'il n'existe plus.
+		inId : élément
+	*/
+	fun copyFromHistory(inId: String): Boolean
+	{
+		val vText = history.text(inId) ?: return false													// texte complet
+		clips.markSeen(vText)
+		return fBoard?.write(vText) ?: false
 	}
 
 	/*

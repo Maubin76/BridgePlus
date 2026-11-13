@@ -50,7 +50,7 @@ fun DevicesPanel(inApp: DesktopApp)
 	val vType     = bridgeType()																	// styles de texte
 	val vState    by inApp.link.state.collectAsState()											// état de la liaison
 	val vSettings by inApp.settings.collectAsState()											// réglages
-	val vClips    by inApp.clips.recent.collectAsState()										// derniers échanges
+	val vClips    by inApp.history.items.collectAsState()										// historique
 	var vRename   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à renommer
 	var vForget   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à oublier
 	var vNow      by remember { mutableStateOf(System.currentTimeMillis()) }					// horloge (compte à rebours, « vu il y a »)
@@ -89,7 +89,8 @@ fun DevicesPanel(inApp: DesktopApp)
 		if (vClips.isNotEmpty())
 		{
 			SettingsSection("Derniers échanges") {
-				for (vClip in vClips.take(5)) ClipRow(vClip.outgoing, vClip.text, vClip.peers.joinToString(", "), relativeTime(vClip.at, vNow))
+				for (vClip in vClips.take(5)) ClipRow(vClip.outgoing, vClip.preview, vClip.peers.joinToString(", "), relativeTime(vClip.at, vNow))
+				if (inApp.hasHotkey) BasicText("Tout l'historique : ${Hotkey.parse(vSettings.historyHotkey).label()}, depuis n'importe quelle appli.", style = vType.bodySmall)
 			}
 		}
 		if (vOffer != null)

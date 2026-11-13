@@ -22,6 +22,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -91,6 +92,17 @@ fun main(inArgs: Array<String>)
 		val vShow     by vInstance.requests.collectAsState()										// demandes d'une seconde instance
 		LaunchedEffect(vShow) { if (vShow > 0) vVisible = true }
 		LaunchedEffect(Unit) { vApp.notices.collect { vTray.sendNotification(Notification("BridgePlus", it, Notification.Type.Warning)) } }
+		var vCard     by remember { mutableStateOf<CardRequest?>(null) }						// carte de l'historique affichée ; null sans
+		var vSerial   by remember { mutableIntStateOf(0) }											// numéro de la dernière demande
+		LaunchedEffect(Unit) { vApp.hotkeyPresses.collect { vSerial++; vCard = CardRequest(it, vSerial) } }
+		CompositionLocalProvider(LocalAnimationsEnabled provides remember { SystemPrefs.animationsEnabled() }) {
+			HistoryWindow(
+				inRequest  = vCard,
+				inApp      = vApp,
+				inOnClosed = { vRestore -> val vRequest = vCard; vCard = null; if (vRestore) vRequest?.active?.restore() },
+				inIcon     = vLogo
+			)
+		}
 		LaunchedEffect(Unit) {
 			if (vSettings.launchAtStartup && WindowsStartup.exe != null) withContext(Dispatchers.IO) { if (!WindowsStartup.isOn()) WindowsStartup.set(true) }
 		}
@@ -101,6 +113,7 @@ fun main(inArgs: Array<String>)
 			onAction = { vVisible = true },
 			menu     = {
 				Item("Ouvrir BridgePlus", onClick = { vVisible = true })
+				Item("Historique du presse-papiers", onClick = { vSerial++; vCard = CardRequest(ActiveWindow(null, null), vSerial) })
 				Item("Appairer un téléphone", onClick = { vPage = PcPage.Devices; vVisible = true; vApp.background { startPairing() } })
 				Item("Réglages", onClick = { vPage = PcPage.Settings; vVisible = true })
 				Separator()

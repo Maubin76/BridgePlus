@@ -310,4 +310,19 @@ object LineIcons
 		"M12 5 V19",
 		"M6.5 13.5 L12 19 L17.5 13.5"
 	)
+
+	// Épingler : punaise.
+	val Pin: ImageVector = lineIcon(
+		"Épingler",
+		"M9 4 H15 L14 10 L17.5 13.5 H6.5 L10 10 Z",
+		"M12 13.5 V20"
+	)
+
+	// Historique : horloge avec flèche de retour.
+	val History: ImageVector = lineIcon(
+		"Historique",
+		"M4.5 12 a7.5 7.5 0 1 0 2.2 -5.3",
+		"M4 4.5 V8 H7.5",
+		"M12 8 V12 L15 14"
+	)
 }
