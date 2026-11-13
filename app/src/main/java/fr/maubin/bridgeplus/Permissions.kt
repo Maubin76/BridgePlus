@@ -41,7 +41,8 @@ fun MissingPermissions(inResumes: Int)
 			"wifi".takeIf { !hasWifiNamePermission(vContext) },
 			"toujours".takeIf { hasWifiNamePermission(vContext) && !hasBackgroundWifiName(vContext) },
 			"batterie".takeIf { !isBatteryUnrestricted(vContext) },
-			"notifications".takeIf { !hasNotificationPermission(vContext) }
+			"notifications".takeIf { !hasNotificationPermission(vContext) },
+			"ecoute".takeIf { vContext.bridgeApp.settings.value.noticesSend && !NoticeListener.granted(vContext) }
 		)
 	}																							// autorisations manquantes
 	Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -58,6 +59,14 @@ fun MissingPermissions(inResumes: Int)
 				"batterie"      -> InfoCard(LineIcons.Info, "Pour que la liaison reprenne seule à votre retour, laissez BridgePlus fonctionner en arrière-plan. Sa consommation reste négligeable.", "Autoriser", {
 					vContext.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:${vContext.packageName}".toUri()))
 				})
+				"ecoute"        -> InfoCard(
+					inIcon      = LineIcons.Info,
+					inText      = "Pour voir les notifications du téléphone sur le PC, BridgePlus doit pouvoir les lire. Android 16 protège ce réglage pour une appli installée hors du Play Store : 1. Infos de l'appli › ⋮ (en haut à droite) › Autoriser les paramètres restreints ; 2. Accès aux notifications › BridgePlus › Autoriser.",
+					inAction    = "Infos de l'appli",
+					inOnAction  = { vContext.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${vContext.packageName}".toUri())) },
+					inAction2   = "Accès aux notifications",
+					inOnAction2 = { runCatching { vContext.startActivity(NoticeListener.accessIntent(vContext)) }.onFailure { vContext.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) } }
+				)
 				"notifications" -> InfoCard(LineIcons.Info, "Autorisez les notifications pour voir « Relié à <PC> » et, plus tard, les textes et fichiers reçus.", "Autoriser", {
 					vLocation.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
 				})

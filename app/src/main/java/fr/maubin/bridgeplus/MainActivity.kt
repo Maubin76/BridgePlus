@@ -35,7 +35,8 @@ enum class PhoneScreen
 	Home,																					// état de la liaison, derniers échanges
 	History,																				// historique du presse-papiers
 	Devices,																				// PC appairés, appairage
-	Settings																				// réseau de la maison, autorisations
+	Settings,																				// réseau de la maison, autorisations
+	NoticeApps																				// liste blanche des notifications
 }
 
 /*
@@ -153,7 +154,7 @@ fun PhoneApp()
 	var vScreen  by rememberSaveable { mutableStateOf(PhoneScreen.Home) }							// écran affiché
 	var vResumes by remember { mutableIntStateOf(0) }												// retours à l'écran
 	LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vResumes++ }
-	BackHandler(enabled = vScreen != PhoneScreen.Home) { vScreen = PhoneScreen.Home }
+	BackHandler(enabled = vScreen != PhoneScreen.Home) { vScreen = if (vScreen == PhoneScreen.NoticeApps) PhoneScreen.Settings else PhoneScreen.Home }
 	val vNetwork = remember(vResumes, vState) { currentPhoneNetwork(vContext) }						// réseau du téléphone
 	val vOnHome  = remember(vNetwork, vState.home) { vNetwork.wifi?.let { it in vState.home } == true }	// à la maison
 	val vHome    = { vScreen = PhoneScreen.Home }													// retour à l'accueil
@@ -162,6 +163,7 @@ fun PhoneApp()
 		PhoneScreen.Home     -> HomeScreen(vState, phoneLook(vState, vNetwork, vOnHome), vResumes) { vScreen = it }
 		PhoneScreen.History  -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { HistoryScreen(vHome) }
 		PhoneScreen.Devices  -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { DevicesScreen(vState, vHome) }
-		PhoneScreen.Settings -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { SettingsScreen(vState, vNetwork, vResumes, vHome) }
+		PhoneScreen.Settings   -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { SettingsScreen(vState, vNetwork, vResumes, vHome) { vScreen = PhoneScreen.NoticeApps } }
+		PhoneScreen.NoticeApps -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { NoticeAppsScreen { vScreen = PhoneScreen.Settings } }
 	}
 }

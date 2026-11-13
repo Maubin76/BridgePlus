@@ -8,6 +8,8 @@ import fr.maubin.bridgeplus.clip.ClipRelay
 import fr.maubin.bridgeplus.history.ClipHistory
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.LocalNetwork
+import fr.maubin.bridgeplus.link.fromBase64
+import fr.maubin.bridgeplus.link.toBase64
 import fr.maubin.bridgeplus.peers.PcLink
 import fr.maubin.bridgeplus.peers.PcLinkState
 import fr.maubin.bridgeplus.settings.BridgeSettings
@@ -36,6 +38,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import java.io.File
+import java.security.MessageDigest
 import java.util.Properties
 import java.util.concurrent.ConcurrentHashMap
 
@@ -148,6 +151,7 @@ class DesktopApp(
 
 	private val fChoice   = MutableStateFlow<List<File>?>(null)							// fichiers en attente du choix du téléphone ; null sans
 	private val fSources  = ConcurrentHashMap<String, String>()							// chemins des fichiers envoyés, par transfert
+	private val fNoticeTags = ConcurrentHashMap<String, Pair<String, String>>()			// notifications du téléphone affichées : étiquette → (téléphone, clé)
 
 	/*
 		Liaison avec les téléphones ; les textes reçus vont au relais du
@@ -158,7 +162,16 @@ class DesktopApp(
 		fName      = pcName(),
 		fVersion   = appVersion() ?: "dev",
 		fNetworks  = fNetworks,
-		fOnMessage = { vPhone, vMessage -> if (vMessage is LinkMessage.Clip) clips.receive(vPhone.label, vMessage) else files.onMessage(vPhone.id, vPhone.label, vMessage) },
+		fOnMessage = { vPhone, vMessage ->
+			when (vMessage)
+			{
+				is LinkMessage.Clip          -> clips.receive(vPhone.label, vMessage)
+				is LinkMessage.PhoneNotice   -> showNotice(vPhone.id, vPhone.label, vMessage)
+				is LinkMessage.NoticeRemoved -> noticeTag(vPhone.id, vMessage.key).let { vTag -> fNoticeTags.remove(vTag); WinToast.remove(vTag) }
+				is LinkMessage.AppIcon       -> saveIcon(vMessage)
+				else                         -> files.onMessage(vPhone.id, vPhone.label, vMessage)
+			}
+		},
 		fOnChunk   = { vPhone, vChunk -> files.onChunk(vPhone.id, vChunk) },
 		fOnClosed  = { vPhone -> files.onDisconnected(vPhone.id) }
 	)
@@ -216,6 +229,7 @@ class DesktopApp(
 		if (WinBridge.available)
 		{
 			fScope.launch { runCatching { WinToast.setup(writeIcon()) } }
+			WinToast.onDismissed = ::dismissNotice
 			fBoard = WinBridge(::copied) { ActiveWindow.current().takeIf { !it.isOwn }?.let { fPresses.tryEmit(it) } }.also { it.start() }
 			fScope.launch { registerHotkey() }
 		}
@@ -310,6 +324,7 @@ class DesktopApp(
 			{
 				val vAction = vArg.removePrefix("bridgeplus:").substringBefore('?')					// action
 				val vId     = vArg.substringAfter("id=", "").let { java.net.URLDecoder.decode(it, Charsets.UTF_8) }	// élément
+				if (vAction == "masquer") { WinToast.remove(vId); dismissNotice(vId); return }
 				val vFile   = history.items.value.firstOrNull { it.id == vId && it.isFile }?.location?.let(::File) ?: return	// fichier
 				if (vAction == "ouvrir") openFile(vFile) else showInFolder(vFile)
 			}
@@ -336,6 +351,80 @@ class DesktopApp(
 				.onFailure { runCatching { java.awt.Desktop.getDesktop().open(inFile.parentFile) } }
 		}
 	}
+
+	/*
+		Notification du téléphone : affichée comme une notification de
+		Windows (icône de l'appli, titre, texte, « WhatsApp · Pixel »), suivie
+		pour que sa fermeture la masque sur le téléphone ; rien n'est
+		enregistré. Sans notifications de Windows, la zone de notification
+		prend le relais.
+		inPhoneId : téléphone
+		inPhone   : son nom
+		inNotice  : notification
+	*/
+	private fun showNotice(
+		inPhoneId : String,
+		inPhone   : String,
+		inNotice  : LinkMessage.PhoneNotice
+	)
+	{
+		if (!fSettings.value.noticesShow) return
+		val vTag   = noticeTag(inPhoneId, inNotice.key)												// étiquette
+		val vTitle = inNotice.title.ifBlank { inNotice.app }											// titre
+		fNoticeTags[vTag] = inPhoneId to inNotice.key
+		while (fNoticeTags.size > 500) fNoticeTags.keys.firstOrNull()?.let(fNoticeTags::remove)
+		fScope.launch {
+			val vShown = WinToast.show(
+				inTitle       = vTitle,
+				inBody        = inNotice.text,
+				inActions     = listOf(ToastAction("Masquer sur le téléphone", WinToast.link("masquer", vTag))),
+				inTag         = vTag,
+				inImage       = iconFile(inNotice.pkg),
+				inAttribution = "${inNotice.app} · $inPhone"
+			)																						// notification partie
+			if (!vShown) fNotices.tryEmit("$vTitle : ${inNotice.text}")
+		}
+	}
+
+	/*
+		Notification du téléphone fermée sur le PC (croix, clic, bouton
+		« Masquer sur le téléphone ») : masquée aussi sur le téléphone.
+		inTag : étiquette
+	*/
+	private fun dismissNotice(inTag: String)
+	{
+		val (vPhoneId, vKey) = fNoticeTags.remove(inTag) ?: return									// téléphone et clé
+		link.send(vPhoneId, LinkMessage.NoticeDismiss(vKey))
+	}
+
+	/*
+		Icône d'une appli du téléphone, gardée dans le dossier des données
+		(seule chose gardée des notifications).
+		inIcon : icône reçue
+	*/
+	private fun saveIcon(inIcon: LinkMessage.AppIcon)
+	{
+		val vPng = fromBase64(inIcon.png)?.takeIf { it.size in 1..256 * 1024 } ?: return				// image
+		runCatching { iconFile(inIcon.pkg).apply { parentFile.mkdirs() }.writeBytes(vPng) }
+	}
+
+	/*
+		Fichier de l'icône d'une appli du téléphone (nom tiré du paquet).
+		inPkg : paquet
+	*/
+	private fun iconFile(inPkg: String): File = File(fDir, "icones/${noticeTag("icone", inPkg)}.png")
+
+	/*
+		Étiquette d'une notification : empreinte courte du téléphone et de la
+		clé (sûre comme nom de fichier et dans les notifications de Windows,
+		64 caractères au plus).
+		inPhoneId : téléphone
+		inKey     : clé de la notification
+	*/
+	private fun noticeTag(
+		inPhoneId : String,
+		inKey     : String
+	): String = toBase64(MessageDigest.getInstance("SHA-256").digest("$inPhoneId|$inKey".toByteArray(Charsets.UTF_8))).take(22)
 
 	/*
 		Logo (PNG) des notifications de Windows, écrit dans le dossier des

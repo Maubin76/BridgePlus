@@ -46,7 +46,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /*
-	Page Réglages du PC : presse-papiers (chaque sens), historique
+	Page Réglages du PC : presse-papiers (chaque sens), notifications du
+	téléphone, historique
 	(raccourci de la carte, « Tout effacer »), démarrage avec Windows,
 	réseaux de la maison, à propos.
 	inApp : appli PC
@@ -70,6 +71,11 @@ fun SettingsPanel(inApp: DesktopApp)
 			SettingsDivider()
 			OnOffSetting("Du téléphone vers le PC", "Les textes envoyés par le téléphone sont placés dans le presse-papiers du PC.", vSettings.clipReceive) { vOn ->
 				inApp.updateSettings { it.copy(clipReceive = vOn) }
+			}
+		}
+		SettingsSection("Notifications du téléphone") {
+			OnOffSetting("Afficher les notifications du téléphone", "Les applis choisies sur le téléphone (les messageries par défaut) s'affichent ici en notifications de Windows, qui respectent « Ne pas déranger ». Les fermer ici les masque sur le téléphone. Rien n'est enregistré.", vSettings.noticesShow) { vOn ->
+				inApp.updateSettings { it.copy(noticesShow = vOn) }
 			}
 		}
 		SettingsSection("Historique") {

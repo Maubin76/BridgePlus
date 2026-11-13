@@ -187,21 +187,25 @@ fun ForgetDialog(
 }
 
 /*
-	Encadré d'explication : icône et une phrase, avec une action discrète
-	facultative (autorisations, pare-feu).
-	inIcon     : icône
-	inText     : explication
-	inAction   : intitulé de l'action ; null sans
-	inOnAction : action
-	inModifier : modificateur
+	Encadré d'explication : icône et une phrase, avec une ou deux actions
+	discrètes facultatives (autorisations, pare-feu).
+	inIcon      : icône
+	inText      : explication
+	inAction    : intitulé de l'action ; null sans
+	inOnAction  : action
+	inModifier  : modificateur
+	inAction2   : intitulé d'une seconde action ; null sans
+	inOnAction2 : seconde action
 */
 @Composable
 fun InfoCard(
-	inIcon     : ImageVector,
-	inText     : String,
-	inAction   : String?    = null,
-	inOnAction : () -> Unit = {},
-	inModifier : Modifier   = Modifier
+	inIcon      : ImageVector,
+	inText      : String,
+	inAction    : String?    = null,
+	inOnAction  : () -> Unit = {},
+	inModifier  : Modifier   = Modifier,
+	inAction2   : String?    = null,
+	inOnAction2 : () -> Unit = {}
 )
 {
 	Row(
@@ -215,7 +219,10 @@ fun InfoCard(
 			if (inAction != null)
 			{
 				Spacer(Modifier.height(4.dp))
-				TextLink(inAction, inOnAction, Modifier.padding(start = 0.dp))
+				Row {
+					TextLink(inAction, inOnAction, Modifier.padding(start = 0.dp))
+					if (inAction2 != null) TextLink(inAction2, inOnAction2)
+				}
 			}
 		}
 	}

@@ -57,6 +57,11 @@ SHA-256 calculée en route, que le destinataire vérifie avant de ranger le fich
 nettoyé (aucun chemin, aucun caractère interdit, aucun nom réservé de Windows) : un appareil ne peut
 pas écrire hors du dossier de réception.
 
+Les **notifications du téléphone** passent elles aussi dans les trames scellées. Le filtre est
+appliqué sur le téléphone, avant l'envoi : liste blanche par appli, exclusions d'office
+(gestionnaires de mots de passe, banques, authentification), codes de connexion jamais envoyés.
+Leur contenu n'est enregistré nulle part ; le PC ne garde que les icônes des applis.
+
 Les boutons des notifications de Windows lancent un lien `bridgeplus:` qui ne porte qu'un
 identifiant tiré au hasard, jamais un chemin : une page web qui tenterait ce lien ne peut rien ouvrir.
 

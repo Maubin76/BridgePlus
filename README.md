@@ -42,7 +42,7 @@ deux secondes**.
 | 2 | Presse-papiers dans les deux sens, contenus sensibles exclus | ✅ (branche `develop`) |
 | 3 | Historique chiffré, carte du PC (Ctrl+Alt+V) | ✅ (branche `develop`) |
 | 4 | Envoi de fichiers dans les deux sens | ✅ (branche `develop`) |
-| 5 | Notifications du téléphone sur le PC | à venir |
+| 5 | Notifications du téléphone sur le PC | ✅ (branche `develop`) |
 | 6 | Sonnerie, batterie, liens, assistant de premier lancement | à venir |
 
 ## Le presse-papiers
@@ -85,6 +85,21 @@ appareil (Keystore sur le téléphone, DPAPI sur le PC).
   fichier à moitié écrit visible ; nom déjà pris : « photo (2).jpg », jamais d'écrasement ;
   espace libre vérifié avant de commencer. Aucune limite de taille.
 
+## Les notifications du téléphone sur le PC
+
+- Les notifications des applis choisies s'affichent sur le PC en **notifications de Windows** :
+  icône de l'appli, titre, texte, « WhatsApp · Pixel ». Elles respectent « Ne pas déranger ».
+- **Liste blanche** sur le téléphone (Réglages › Notifications sur le PC › Choisir les applis) :
+  les messageries sont activées par défaut, le reste ne part que si vous l'activez.
+- **Jamais** : KeePlus et les gestionnaires de mots de passe, les applis bancaires, les applis
+  d'authentification, et tout ce qui ressemble à un code de connexion, quelle que soit l'appli.
+- **Masquée d'un côté, masquée de l'autre** : fermer la notification sur le PC (ou « Masquer sur le
+  téléphone ») la retire du téléphone, et inversement.
+- Rien n'est enregistré : ni dans l'historique, ni sur le disque, ni dans un journal.
+- **Android 16** protège l'accès aux notifications d'une appli installée hors du Play Store :
+  Infos de l'appli › ⋮ › Autoriser les paramètres restreints, puis Accès aux notifications ›
+  BridgePlus. L'appli guide pas à pas.
+
 ## Installer
 
 - **Téléphone** : APK de la [dernière version](https://github.com/Maubin76/BridgePlus/releases/latest).
@@ -103,6 +118,7 @@ visez le QR code.
 | Fonctionner en arrière-plan (batterie) | Sans elle, Android interdit de relancer la liaison au retour à la maison. |
 | Notifications | Pour la notification discrète « Relié à <PC> ». |
 | Appareil photo | Pour lire le QR code d'appairage, rien d'autre. |
+| Accès aux notifications | Pour afficher sur le PC les notifications des applis choisies. |
 
 ## Construire
 
