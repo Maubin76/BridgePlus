@@ -39,4 +39,4 @@ Aucune donnée : l'application démarre sans appareil appairé. Les écrans ne m
 5. **Sobre en batterie** : la consommation sur une journée reste négligeable, et elle est mesurée.
 
 ## Accessibility & Inclusion
-Texte secondaire d'au moins 4.5:1 sur tous les fonds, dans les deux thèmes. Aucune information portée par la seule couleur : l'état de la liaison a toujours une icône et un texte, et l'icône de la zone de notification change de forme. Animations coupées si le système demande de les réduire. Actions en icône décrites pour les lecteurs d'écran.
+Texte secondaire d'au moins 4.5:1 sur le fond (thème sombre unique, celui de KeePlus). Aucune information portée par la seule couleur : l'état de la liaison a toujours une icône et un texte, et l'icône de la zone de notification change de forme. Animations coupées si le système demande de les réduire. Actions en icône décrites pour les lecteurs d'écran.

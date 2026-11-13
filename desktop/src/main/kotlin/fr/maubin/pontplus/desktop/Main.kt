@@ -14,12 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +42,12 @@ import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.window.rememberWindowState
 import fr.maubin.pontplus.ui.components.LocalAnimationsEnabled
 import fr.maubin.pontplus.ui.icons.LineIcons
-import fr.maubin.pontplus.ui.theme.Pont
-import fr.maubin.pontplus.ui.theme.PontLogo
+import fr.maubin.pontplus.ui.screens.WorkScreen
+import fr.maubin.pontplus.ui.theme.PontBrand
+import fr.maubin.pontplus.ui.theme.PontColors
 import fr.maubin.pontplus.ui.theme.PontPlusTheme
+import fr.maubin.pontplus.ui.theme.logoImage
+import fr.maubin.pontplus.ui.theme.pontType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -84,8 +83,8 @@ fun main(inArgs: Array<String>)
 		val vSettings by vApp.settings.collectAsState()											// réglages
 		val vLook     = pcLook(vState)																// état en clair
 		val vTray     = rememberTrayState()														// icône de la zone de notification
-		val vIcon     = remember(vLook.look) { BitmapPainter(logoImage(vLook.look, 64)) }		// icône selon l'état
-		val vLogo     = remember { BitmapPainter(logoImage(null, 64)) }							// logo de la fenêtre
+		val vIcon     = remember(vLook.look) { BitmapPainter(trayImage(vLook.look, 64)) }		// icône selon l'état
+		val vLogo     = remember { BitmapPainter(logoImage(64)) }									// logo de la fenêtre
 		var vVisible  by remember { mutableStateOf(!vStartup) }									// fenêtre affichée
 		var vPage     by remember { mutableStateOf(PcPage.Devices) }							// page affichée
 		var vTold     by remember { mutableStateOf(false) }										// notification « toujours là » déjà montrée
@@ -123,10 +122,8 @@ fun main(inArgs: Array<String>)
 			icon           = vLogo
 		) {
 			window.minimumSize = Dimension(640, 560)
-			val vDark = isSystemInDarkTheme()															// thème du système
-			PontPlusTheme(inDark = vDark) {
-				val vColors = Pont.colors																// palette
-				LaunchedEffect(vDark) { TitleBar.apply(window, vColors.ground, vColors.text, vDark) }
+			PontPlusTheme {
+				LaunchedEffect(Unit) { TitleBar.apply(window, PontColors.void, PontColors.text, true) }
 				LaunchedEffect(vVisible, vShow) {
 					if (!vVisible) return@LaunchedEffect
 					if (window.isMinimized) window.isMinimized = false
@@ -144,7 +141,9 @@ fun main(inArgs: Array<String>)
 }
 
 /*
-	Contenu de la fenêtre : colonne de navigation à gauche, page à droite.
+	Contenu de la fenêtre, à la manière de KeePlus sur PC : colonne de
+	navigation à gauche (marque, puis les pages), page de travail à droite
+	(voile de brume, grille fine).
 	inApp    : appli PC
 	inPage   : page affichée
 	inOnPage : changement de page
@@ -156,19 +155,14 @@ fun PcWindow(
 	inOnPage : (PcPage) -> Unit
 )
 {
-	val vColors = Pont.colors																	// palette
-	Row(Modifier.fillMaxSize().background(vColors.ground)) {
-		Column(Modifier.width(220.dp).fillMaxHeight().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-			Row(verticalAlignment = Alignment.CenterVertically) {
-				PontLogo(28.dp)
-				Spacer(Modifier.width(10.dp))
-				Text("PontPlus", style = Pont.type.title)
-			}
-			Spacer(Modifier.height(22.dp))
+	Row(Modifier.fillMaxSize().background(PontColors.ground)) {
+		Column(Modifier.width(220.dp).fillMaxHeight().background(PontColors.void).padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+			PontBrand()
+			Spacer(Modifier.height(28.dp))
 			for (vPage in PcPage.entries) NavEntry(vPage, vPage == inPage) { inOnPage(vPage) }
 		}
-		Box(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal = 32.dp, vertical = 28.dp)) {
-			Box(Modifier.widthIn(max = 640.dp).fillMaxWidth()) {
+		Box(Modifier.weight(1f).fillMaxHeight()) {
+			WorkScreen(inPage.label, null) {
 				when (inPage)
 				{
 					PcPage.Devices  -> DevicesPanel(inApp)
@@ -180,7 +174,7 @@ fun PcWindow(
 }
 
 /*
-	Entrée de la colonne de navigation.
+	Entrée de la colonne de navigation : active, fond gris et texte blanc.
 	inPage     : page
 	inSelected : page affichée
 	inOnClick  : choix de la page
@@ -192,18 +186,17 @@ private fun NavEntry(
 	inOnClick  : () -> Unit
 )
 {
-	val vColors = Pont.colors																	// palette
 	Row(
 		Modifier
 			.fillMaxWidth()
 			.clip(RoundedCornerShape(12.dp))
-			.background(if (inSelected) vColors.surfaceHigh else vColors.ground)
+			.background(if (inSelected) PontColors.surfaceHigh else PontColors.void)
 			.clickable(role = Role.Tab, onClick = inOnClick)
 			.padding(horizontal = 12.dp, vertical = 10.dp),
 		verticalAlignment = Alignment.CenterVertically
 	) {
-		Icon(inPage.icon, contentDescription = null, tint = if (inSelected) vColors.accent else vColors.textMuted, modifier = Modifier.size(20.dp))
+		Icon(inPage.icon, contentDescription = null, tint = if (inSelected) PontColors.text else PontColors.textMuted, modifier = Modifier.size(20.dp))
 		Spacer(Modifier.width(12.dp))
-		Text(inPage.label, style = Pont.type.label.copy(color = if (inSelected) vColors.text else vColors.textMuted))
+		BasicText(inPage.label, style = pontType().label.copy(color = if (inSelected) PontColors.text else PontColors.textMuted))
 	}
 }

@@ -1,55 +1,50 @@
 ---
 name: PontPlus
-description: Le téléphone et le PC reliés par le Wi-Fi de la maison ; fonds neutres et chauds, un seul accent orange international, l'état de la liaison écrit en grand.
+description: Le téléphone et le PC reliés, dans la direction artistique de KeePlus : noir et argent, une brume grise qui tombe sur une grille fine, un pont flou en décor, l'état de la liaison en très grand.
 colors:
-  light-ground: "#FAF8F6"
-  light-surface: "#FFFFFF"
-  light-surface-high: "#F2EEEA"
-  light-rule: "#E6E0DA"
-  light-text: "#1C1816"
-  light-text-muted: "#5F5751"
-  light-text-faint: "#7D746D"
-  light-accent: "#B8401F"
-  light-on-accent: "#FFFFFF"
-  light-accent-soft: "#F8E4DB"
-  light-success: "#2D7A57"
-  light-danger: "#B3261E"
-  dark-ground: "#121010"
-  dark-surface: "#1C1917"
-  dark-surface-high: "#262220"
-  dark-rule: "#36312E"
-  dark-text: "#F3EFEC"
-  dark-text-muted: "#ADA49E"
-  dark-text-faint: "#8C847E"
-  dark-accent: "#FF8A5C"
-  dark-on-accent: "#2A0E04"
-  dark-accent-soft: "#3B2219"
-  dark-success: "#6FC59A"
-  dark-danger: "#F2827A"
+  void: "#050505"
+  ground: "#0B0B0C"
+  mist-top: "#9A9A9C"
+  mist-mid: "#3A3A3C"
+  surface: "#141415"
+  surface-high: "#1C1C1E"
+  surface-highest: "#262628"
+  rule: "#2A2A2C"
+  grid-line: "#FFFFFF0F"
+  grid-line-lit: "#FFFFFF2E"
+  emblem: "#2E2E30"
+  text: "#F5F5F5"
+  text-muted: "#9C9C9E"
+  text-faint: "#6A6A6C"
+  silver-light: "#F2F2F2"
+  silver-dark: "#B8B8BA"
+  silver-ink: "#111111"
+  danger: "#D9645F"
+  success: "#6FB592"
 typography:
   hero:
     fontFamily: "Satoshi, sans-serif"
-    fontSize: "40sp"
+    fontSize: "44sp"
     fontWeight: 300
-    lineHeight: "46sp"
+    lineHeight: "50sp"
     letterSpacing: "-0.025em"
   display:
     fontFamily: "Satoshi, sans-serif"
-    fontSize: "30sp"
+    fontSize: "34sp"
     fontWeight: 300
-    lineHeight: "36sp"
+    lineHeight: "40sp"
     letterSpacing: "-0.02em"
   headline:
     fontFamily: "Satoshi, sans-serif"
-    fontSize: "20sp"
+    fontSize: "24sp"
     fontWeight: 400
-    lineHeight: "26sp"
+    lineHeight: "30sp"
     letterSpacing: "-0.01em"
   title:
     fontFamily: "Satoshi, sans-serif"
-    fontSize: "16sp"
+    fontSize: "17sp"
     fontWeight: 500
-    lineHeight: "22sp"
+    lineHeight: "24sp"
     letterSpacing: "0"
   body:
     fontFamily: "Satoshi, sans-serif"
@@ -72,70 +67,83 @@ typography:
 radii:
   pill: "999dp"
   card: "20dp"
-  info: "16dp"
+  field: "16dp"
   device-icon: "12dp"
-  logo: "24%"
+  logo: "10dp"
 ---
 
 # PontPlus — direction artistique
 
-## En une phrase
-Un outil discret qu'on regarde rarement : des fonds neutres légèrement chauds, un seul accent, l'**orange international** du Golden Gate, et l'état de la liaison écrit en très grand, en fin, comme les grands titres de la gamme.
+PontPlus **reprend la direction artistique de KeePlus**, à l'identique : mêmes couleurs, mêmes polices, même décor, mêmes composants. Seuls changent l'emblème (un pont à la place du bouclier) et les écrans. Ce choix remplace la proposition initiale d'un thème clair et sombre avec un accent orange.
 
-## Parenté avec la gamme
-- **Satoshi** et ses grands titres fins (graisse 300), comme KeePlus.
-- Icônes au trait de 1,6 sur une grille de 24, sans aplat, comme KeePlus.
-- Cartes `surface` à grand rayon, pilules pour les boutons et les pastilles.
-- Sobriété de PatrimoinePlus : une seule chose élève la voix par écran (ici, l'état de la liaison).
+## En une phrase
+Du noir profond et de l'argent : une brume grise descend du haut de l'écran sur une grille très fine, un grand pont flou flotte en arrière-plan, et l'état de la liaison s'écrit en grand, fin, en deux tons.
 
 ## Thème
-**Clair et sombre, selon le système**, sur Android comme sur PC. La barre de titre de Windows 11 prend la couleur du fond.
+**Sombre uniquement**, sur Android comme sur PC, comme KeePlus. La barre de titre de Windows 11 prend le noir `void`.
 
 ## Couleurs
-- **Un seul accent** : `accent` (orange international). Il marque le bouton principal, la liaison établie (icône, pastille, disque) et le logo. Rien d'autre n'est coloré.
-- **Deux couleurs d'état** : `success` (appairage réussi) et `danger` (refus, erreur, action destructrice). Toujours accompagnées d'un texte.
-- **Contrastes vérifiés** : `text-muted` atteint au moins 6:1 sur `ground`, `surface` et `surface-high` dans les deux thèmes ; `accent` au moins 4,8:1 ; le texte sur l'accent 5,5:1 (clair) et 7,8:1 (sombre). `text-faint` est réservé aux indications non essentielles.
+- **Monochrome** : tout en noir, gris, blanc et argent. Aucune couleur d'accent.
+- **Deux couleurs d'état seulement**, sourdes : `danger` (refus, erreur) et `success` (appairage réussi). Elles s'accompagnent toujours d'une icône et d'un texte.
+- Le texte secondaire (`text-muted`) atteint au moins 4.5:1 sur `ground`. `text-faint` est réservé aux indications non essentielles.
+
+## Typographie
+- **Satoshi** pour toute l'interface. Graisse Light (300) dans les grands corps, Regular et Medium ailleurs.
+- **Mots en deux tons** : dans les grands titres, le contexte est en `text-muted` et le mot fort en `text`. Exemples : « Relié à **Bureau.** », « Hors du réseau **de la maison.** », « Votre téléphone et votre PC, **reliés.** »
 
 ## L'état de la liaison
-C'est l'information principale. Il a toujours **trois porteurs** : une icône, un texte et une couleur. La couleur seule ne porte jamais rien.
+C'est l'information principale. Il a toujours une **icône et un texte** ; la couleur n'en porte presque aucune.
 
-| État | Icône | Couleur | Texte (exemple) |
-|---|---|---|---|
-| Relié | deux maillons attachés | accent | « Relié à Bureau » |
-| Recherche | flèches qui tournent | text-muted | « Recherche du PC… » |
-| Absent | maillons séparés | text-muted | « Bureau est absent » |
-| Refusé | cercle « ! » | danger | « Bureau refuse ce téléphone » |
-| Hors de la maison | maison barrée | text-muted | « Hors du réseau de la maison » |
-| Arrêté | cercle barré | text-muted | « Aucun PC appairé » |
+| État | Icône | Titre (exemple) |
+|---|---|---|
+| Relié | deux maillons attachés (blanc) | « Relié à **Bureau.** » |
+| Recherche | flèches qui tournent | « Recherche **du PC…** » |
+| Absent | maillons séparés | « Bureau est **absent.** » |
+| Refusé | cercle « ! » (`danger`) | « Bureau **refuse ce téléphone.** » |
+| Hors de la maison | maison barrée | « Hors du réseau **de la maison.** » |
+| Arrêté, aucun appareil | cercle barré | « Aucun téléphone **appairé.** » |
 
-En haut de l'accueil (`LinkHero`), l'icône est dans un disque de 56 dp (`accent-soft` si relié, `surface-high` sinon), suivie du titre en `hero` et d'une précision en `text-muted`.
+- **En haut de l'accueil** : l'icône dans un disque `surface-high` au contour `rule`, puis le titre en `hero`.
+- **Pastille d'état** dans les listes : « Relié » est une pastille active (fond `text`, texte `void`), comme le filtre actif de KeePlus ; les autres états ont un contour `rule`.
+- **Icône de la zone de notification (PC)** : le logo argent, net si relié, voilé de noir sinon, avec une marque qui change sa forme : barre oblique hors de la maison, anneau pour un téléphone absent, pastille `danger` pour une erreur. L'info-bulle reprend le titre.
 
-**Icône de la zone de notification (PC)** : le logo, orange si relié, gris sinon. Une marque change sa forme : barre oblique hors de la maison, anneau pour un téléphone absent, pastille rouge pour une erreur. L'info-bulle reprend le texte.
+## Le décor (écrans clés seulement)
+Il s'applique à l'**accueil du téléphone**. Il se compose de trois couches, celles de KeePlus :
+1. **Brume** : dégradé vertical de `mist-top` (en haut) vers `mist-mid` (vers 40 %), puis `void` (à partir de 70 %).
+2. **Grille** : traits de 1 px en `grid-line`, avec un pas de 48 dp, estompés vers le bas.
+3. **Emblème** : le pont en `emblem`, très agrandi (environ 1,6 fois la largeur de l'écran), décentré à droite, flou de 32 dp, coupé par les bords. Un grain léger couvre l'ensemble.
+
+Les **écrans de travail** (Appareils, Réglages, fenêtre du PC) ont un fond `ground`, la grille et le grain, et un léger voile de brume sur les 120 premiers dp.
 
 ## Logo
-Un **pont en arche** blanc (tablier fin posé sur une arche) avec le « + » de la gamme au-dessus, dans un carré arrondi orange (rayon de 24 % du côté). Un seul tracé (`kLogoPath`, grille de 108) sert à l'appli, à l'icône Android (adaptative et monochrome) et à l'icône Windows, générées par `LogoAssetsTest`.
+Un **pont noir** (tablier fin posé sur une arche) surmonté du « + » de la gamme, sa moitié droite en gris (facette), **gravé dans une plaque d'aluminium brossé** au chanfrein usiné, avec une lumière unique en haut à gauche. C'est la matière du logo de KeePlus. En dessous de 40 dp, la version est à plat. L'icône adaptative d'Android (plaque brossée en fond, pont gravé au premier plan, version monochrome) et l'icône Windows sont générées par `LogoAssetsTest`.
 
-## Composants
-- **Bouton principal** : pilule pleine `accent`, texte `on-accent` en `label`. Un seul par écran.
-- **Bouton secondaire** : pilule à contour `rule`, texte `text`.
-- **Bouton discret** : texte seul ; en `danger` pour « Oublier cet appareil ».
-- **Carte** (`PontCard`) : fond `surface`, rayon `card`, marge de 18 dp.
-- **Encadré d'explication** (`InfoCard`) : fond `surface-high`, rayon `info`, icône `text-muted`, une phrase et une action. Sert aux autorisations et au pare-feu.
-- **Ligne d'appareil** : icône dans un carré `surface-high` (rayon `device-icon`), nom en `title`, pastille d'état et « vu il y a… », puis les actions renommer et oublier (icônes avec description pour les lecteurs d'écran).
-- **Pastille d'état** : pilule `accent-soft` si relié, `surface-high` sinon, icône de 16 dp et texte.
+## Composants (ceux de KeePlus)
+- **Bouton principal** (`SilverButton`) : pilule pleine largeur, dégradé `silver-light` → `silver-dark`, liseré clair en haut, reflet toutes les 6 s, texte `silver-ink`. Un seul par écran.
+- **Bouton secondaire** (`GhostButton`) : pilule avec un contour `rule`.
+- **Lien** (`TextLink`) : texte `text-muted`, en `danger` pour une action destructrice.
+- **Sections** (`SettingsSection`) : titre discret en `body-small`, puis une carte `surface` au contour `rule`, rayon `card`.
+- **Pastilles de choix** (`FilterPill`) : oui ou non (« Activé » / « Désactivé »), réseaux de la maison. Pas d'interrupteur.
+- **Ligne d'appareil** : icône dans un carré `surface-high` (rayon `device-icon`), nom en `title`, pastille d'état et « vu il y a… », actions renommer et oublier en icônes rondes. Pas de séparateur.
+- **Dialogues** : carte `surface-high` de rayon 24, titre `headline`, texte `body-small`, deux boutons fantômes.
+- **Encadré d'explication** : carte `surface`, icône `text-muted` et une phrase, avec un lien d'action (autorisations, pare-feu).
+- **Icônes** : le jeu au trait de 1,6 de KeePlus, complété des icônes de la liaison (maillons, maison barrée, ordinateur, téléphone, QR code, Wi-Fi).
 
 ## Mise en page
-- **Android** : trois onglets (Accueil, Appareils, Réglages) dans une barre de navigation `surface`. L'onglet actif a l'icône `accent` sur un indicateur `accent-soft`. Contenu en colonne avec une marge de 20 dp.
-- **PC** : une colonne de navigation de 220 dp (logo, Appareils, Réglages), puis le contenu limité à 640 dp de large. La fenêtre se ferme dans la zone de notification.
+- **Android** : comme KeePlus, un seul écran principal (l'accueil, avec le décor). Appareils et Réglages sont accessibles par des icônes en haut à droite. Ce sont des écrans de travail avec une flèche de retour, et leurs boutons sont réduits de 20 %.
+- **PC** : une colonne de navigation `void` (marque, Appareils, Réglages), puis la page de travail limitée à 640 dp. La fenêtre se ferme dans la zone de notification.
 
 ## Mouvement
-Sobre : le changement d'état de la liaison se fait en **fondu**. Si le système demande de réduire les animations (Android : « Supprimer les animations » ; Windows : « Effets d'animation » désactivés), le changement est instantané (`LocalAnimationsEnabled`).
+- Le changement d'état de la liaison se fait en fondu (220 ms).
+- Reflet argent sur le bouton principal, parallaxe de l'emblème (inclinaison du téléphone, souris sur PC), comme dans KeePlus.
+- **Tout est coupé** si le système demande de réduire les animations (Android : « Supprimer les animations » ; Windows : « Effets d'animation »).
 
 ## Ton des textes
-Français, vouvoiement, phrases courtes. Exemples : « Relié à Bureau », « Hors du réseau de la maison », « Oublier cet appareil », « Valable encore 4 min 12 s ».
+Français, vouvoiement, sobre. Exemples : « Relié à Bureau », « Oublier cet appareil », « Valable encore 4 min 12 s ».
 
 ## À éviter
-- Une deuxième couleur d'accent, des dégradés colorés.
-- Une information portée par la seule couleur.
+- Toute couleur décorative : pas d'accent, pas de dégradé coloré.
+- Le décor complet derrière les listes.
+- Plus d'un bouton argenté par écran.
+- Le gras dans les grands titres : la force vient de la taille et du contraste gris/blanc.
 - Une notification permanente bavarde : celle du service dit seulement « Relié à <PC> ».
-- Plus d'un bouton principal par écran.

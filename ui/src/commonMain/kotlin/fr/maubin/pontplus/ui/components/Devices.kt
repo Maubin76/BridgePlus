@@ -2,6 +2,7 @@ package fr.maubin.pontplus.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,13 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,81 +24,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import fr.maubin.pontplus.ui.icons.LineIcons
-import fr.maubin.pontplus.ui.theme.Pont
+import fr.maubin.pontplus.ui.theme.PontColors
+import fr.maubin.pontplus.ui.theme.pontType
 
 /*
-	Titre de section d'un écran de travail.
-	inText     : titre
-	inModifier : modificateur
-*/
-@Composable
-fun SectionTitle(
-	inText     : String,
-	inModifier : Modifier = Modifier
-)
-{
-	Text(inText, style = Pont.type.headline, modifier = inModifier.padding(top = 8.dp, bottom = 12.dp))
-}
-
-/*
-	Carte d'un écran de travail : fond surface, coins arrondis, marge
-	intérieure.
-	inModifier : modificateur
-	inContent  : contenu
-*/
-@Composable
-fun PontCard(
-	inModifier : Modifier = Modifier,
-	inContent  : @Composable () -> Unit
-)
-{
-	Column(inModifier.fillMaxWidth().background(Pont.colors.surface, RoundedCornerShape(20.dp)).padding(18.dp)) {
-		inContent()
-	}
-}
-
-/*
-	Encadré d'explication : icône et texte, avec une action facultative.
-	inIcon     : icône
-	inText     : explication
-	inAction   : intitulé de l'action ; null sans
-	inOnAction : action
-	inModifier : modificateur
-*/
-@Composable
-fun InfoCard(
-	inIcon     : ImageVector,
-	inText     : String,
-	inAction   : String?    = null,
-	inOnAction : () -> Unit = {},
-	inModifier : Modifier   = Modifier
-)
-{
-	val vColors = Pont.colors																// palette
-	Row(
-		modifier          = inModifier.fillMaxWidth().background(vColors.surfaceHigh, RoundedCornerShape(16.dp)).padding(16.dp),
-		verticalAlignment = Alignment.Top
-	) {
-		Icon(inIcon, contentDescription = null, tint = vColors.textMuted, modifier = Modifier.size(20.dp))
-		Spacer(Modifier.width(12.dp))
-		Column(Modifier.weight(1f)) {
-			Text(inText, style = Pont.type.body)
-			if (inAction != null)
-			{
-				Spacer(Modifier.height(6.dp))
-				QuietButton(inAction, inOnAction, Modifier.padding(start = 0.dp))
-			}
-		}
-	}
-}
-
-/*
-	Ligne d'un appareil appairé : icône, nom, pastille d'état, dernière
-	connexion, et les actions renommer et oublier.
+	Ligne d'un appareil appairé : icône dans un carré gris (comme les
+	monogrammes de KeePlus), nom, pastille d'état et dernière connexion, puis
+	les actions renommer et oublier. Pas de séparateur : seul l'espacement
+	sépare les lignes.
 	inIcon     : icône de l'appareil (téléphone, ordinateur)
 	inName     : nom affiché
 	inLook     : état de la liaison
@@ -119,30 +58,68 @@ fun DeviceRow(
 	inOnForget : () -> Unit
 )
 {
-	val vColors = Pont.colors																// palette
-	Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-		Icon(inIcon, contentDescription = null, tint = vColors.text, modifier = Modifier.size(44.dp).background(vColors.surfaceHigh, RoundedCornerShape(12.dp)).padding(11.dp))
+	val vType = pontType()																	// styles de texte
+	Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+		Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(PontColors.surfaceHigh), contentAlignment = Alignment.Center) {
+			Icon(inIcon, contentDescription = null, tint = PontColors.text, modifier = Modifier.size(22.dp))
+		}
 		Spacer(Modifier.width(14.dp))
 		Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-			Text(inName, style = Pont.type.title)
+			OneLine(inName, vType.title)
 			Row(verticalAlignment = Alignment.CenterVertically) {
 				StatusPill(inLook, inStatus)
 				if (inLastSeen != null && inLook != LinkLook.Connected)
 				{
 					Spacer(Modifier.width(8.dp))
-					Text("vu $inLastSeen", style = Pont.type.bodySmall)
+					OneLine("vu $inLastSeen", vType.bodySmall)
 				}
 			}
 		}
-		IconButton(onClick = inOnRename) { Icon(LineIcons.Edit, contentDescription = "Renommer $inName", tint = vColors.textMuted) }
-		IconButton(onClick = inOnForget) { Icon(LineIcons.Trash, contentDescription = "Oublier $inName", tint = vColors.textMuted) }
+		IconAction(LineIcons.Edit, "Renommer $inName", inOnRename)
+		IconAction(LineIcons.Trash, "Oublier $inName", inOnForget)
 	}
 }
 
 /*
-	Dialogue de renommage d'un appareil.
+	Dialogue de PontPlus, celui de KeePlus : carte gris foncé arrondie,
+	titre, texte, puis deux boutons fantômes côte à côte.
+	inTitle     : titre
+	inText      : explication
+	inConfirm   : intitulé du bouton de confirmation
+	inOnDismiss : annulation
+	inOnConfirm : confirmation
+	inExtra     : contenu entre le texte et les boutons (champ) ; rien par défaut
+*/
+@Composable
+fun ConfirmDialog(
+	inTitle     : String,
+	inText      : String,
+	inConfirm   : String,
+	inOnDismiss : () -> Unit,
+	inOnConfirm : () -> Unit,
+	inExtra     : @Composable () -> Unit = {}
+)
+{
+	Dialog(onDismissRequest = inOnDismiss) {
+		Column(
+			Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(PontColors.surfaceHigh).padding(20.dp),
+			verticalArrangement = Arrangement.spacedBy(14.dp)
+		) {
+			BasicText(inTitle, style = pontType().headline)
+			BasicText(inText, style = pontType().bodySmall)
+			inExtra()
+			Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+				GhostButton("Annuler", inOnDismiss, Modifier.weight(1f))
+				GhostButton(inConfirm, inOnConfirm, Modifier.weight(1f))
+			}
+		}
+	}
+}
+
+/*
+	Dialogue de renommage d'un appareil : champ en pilule sur fond surface.
 	inCurrent   : nom actuel
-	inOriginal  : nom que l'appareil se donne (proposé si le champ est vidé)
+	inOriginal  : nom que l'appareil se donne (repris si le champ est vidé)
 	inOnRename  : nouveau nom (vide : reprendre le sien)
 	inOnDismiss : fermeture sans changement
 */
@@ -155,23 +132,29 @@ fun RenameDialog(
 )
 {
 	var vText by remember { mutableStateOf(inCurrent) }										// nom saisi
-	AlertDialog(
-		onDismissRequest = inOnDismiss,
-		title            = { Text("Renommer", style = Pont.type.headline) },
-		text             = {
-			OutlinedTextField(
-				value           = vText,
-				onValueChange   = { vText = it.take(60) },
-				singleLine      = true,
-				placeholder     = { Text(inOriginal) },
-				supportingText  = { Text("Laissez vide pour reprendre « $inOriginal ».") },
-				keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-				keyboardActions = KeyboardActions(onDone = { inOnRename(vText) })
-			)
-		},
-		confirmButton    = { QuietButton("Renommer", { inOnRename(vText) }) },
-		dismissButton    = { QuietButton("Annuler", inOnDismiss) }
-	)
+	ConfirmDialog(
+		inTitle     = "Renommer",
+		inText      = "Laissez vide pour reprendre « $inOriginal ».",
+		inConfirm   = "Renommer",
+		inOnDismiss = inOnDismiss,
+		inOnConfirm = { inOnRename(vText) }
+	) {
+		BasicTextField(
+			value           = vText,
+			onValueChange   = { vText = it.take(60) },
+			singleLine      = true,
+			textStyle       = pontType().body,
+			cursorBrush     = SolidColor(PontColors.text),
+			keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+			keyboardActions = KeyboardActions(onDone = { inOnRename(vText) }),
+			decorationBox   = { vInner ->
+				Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(PontColors.surface).padding(horizontal = 16.dp, vertical = 14.dp)) {
+					if (vText.isEmpty()) BasicText(inOriginal, style = pontType().body.copy(color = PontColors.textFaint))
+					vInner()
+				}
+			}
+		)
+	}
 }
 
 /*
@@ -187,11 +170,46 @@ fun ForgetDialog(
 	inOnDismiss : () -> Unit
 )
 {
-	AlertDialog(
-		onDismissRequest = inOnDismiss,
-		title            = { Text("Oublier $inName ?", style = Pont.type.headline) },
-		text             = { Text("La clé de cette paire sera détruite des deux côtés : $inName ne pourra plus se connecter. Pour le relier de nouveau, il faudra l'appairer avec un nouveau QR code.", style = Pont.type.body) },
-		confirmButton    = { QuietButton("Oublier cet appareil", inOnForget, inDanger = true) },
-		dismissButton    = { QuietButton("Annuler", inOnDismiss) }
+	ConfirmDialog(
+		inTitle     = "Oublier « $inName » ?",
+		inText      = "La clé de cette paire sera détruite des deux côtés : $inName ne pourra plus se connecter. Pour le relier de nouveau, il faudra l'appairer avec un nouveau QR code.",
+		inConfirm   = "Oublier",
+		inOnDismiss = inOnDismiss,
+		inOnConfirm = inOnForget
 	)
+}
+
+/*
+	Encadré d'explication : icône et une phrase, avec une action discrète
+	facultative (autorisations, pare-feu).
+	inIcon     : icône
+	inText     : explication
+	inAction   : intitulé de l'action ; null sans
+	inOnAction : action
+	inModifier : modificateur
+*/
+@Composable
+fun InfoCard(
+	inIcon     : ImageVector,
+	inText     : String,
+	inAction   : String?    = null,
+	inOnAction : () -> Unit = {},
+	inModifier : Modifier   = Modifier
+)
+{
+	Row(
+		modifier          = inModifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(PontColors.surface).padding(16.dp),
+		verticalAlignment = Alignment.Top
+	) {
+		Icon(inIcon, contentDescription = null, tint = PontColors.textMuted, modifier = Modifier.size(20.dp))
+		Spacer(Modifier.width(12.dp))
+		Column(Modifier.weight(1f)) {
+			BasicText(inText, style = pontType().bodySmall.copy(color = PontColors.text))
+			if (inAction != null)
+			{
+				Spacer(Modifier.height(4.dp))
+				TextLink(inAction, inOnAction, Modifier.padding(start = 0.dp))
+			}
+		}
+	}
 }

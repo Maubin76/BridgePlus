@@ -1,52 +1,55 @@
 package fr.maubin.pontplus
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import fr.maubin.pontplus.peers.PhoneLinkState
+import fr.maubin.pontplus.ui.components.IconAction
 import fr.maubin.pontplus.ui.components.LinkHero
-import fr.maubin.pontplus.ui.components.PontCard
-import fr.maubin.pontplus.ui.components.SectionTitle
-import fr.maubin.pontplus.ui.theme.Pont
-import fr.maubin.pontplus.ui.theme.PontLogo
+import fr.maubin.pontplus.ui.components.SilverButton
+import fr.maubin.pontplus.ui.icons.LineIcons
+import fr.maubin.pontplus.ui.screens.KeyScreen
+import fr.maubin.pontplus.ui.screens.SettingsSection
+import fr.maubin.pontplus.ui.theme.PontColors
+import fr.maubin.pontplus.ui.theme.pontType
 
 /*
-	Accueil : état de la liaison en grand, autorisations qui manquent, puis
-	les derniers échanges (vides tant que le presse-papiers et les fichiers
-	ne circulent pas : étapes suivantes).
-	inState   : état de la liaison
-	inLook    : état en clair
-	inResumes : retours à l'écran (relecture des autorisations)
+	Accueil, écran clé à la manière de KeePlus : décor complet (brume,
+	grille, grand pont flou), marque en haut à gauche, Appareils et Réglages
+	en haut à droite, et en bas l'état de la liaison en très grand. Suivent
+	les autorisations qui manquent, puis les derniers échanges (vides tant
+	que le presse-papiers et les fichiers ne circulent pas : étapes
+	suivantes). Sans PC appairé, un seul bouton : appairer.
+	inState    : état de la liaison
+	inLook     : état en clair
+	inResumes  : retours à l'écran (relecture des autorisations)
+	inOnScreen : ouverture d'un écran de travail
 */
 @Composable
 fun HomeScreen(
-	inState   : PhoneLinkState,
-	inLook    : PhoneLook,
-	inResumes : Int
+	inState    : PhoneLinkState,
+	inLook     : PhoneLook,
+	inResumes  : Int,
+	inOnScreen : (PhoneScreen) -> Unit
 )
 {
-	Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-		Row(verticalAlignment = Alignment.CenterVertically) {
-			PontLogo(28.dp)
-			Spacer(Modifier.width(10.dp))
-			Text("PontPlus", style = Pont.type.title)
+	val vType = pontType()																		// styles de texte
+	KeyScreen(
+		inActions = {
+			IconAction(LineIcons.Devices, "Appareils", { inOnScreen(PhoneScreen.Devices) }, inTint = PontColors.text)
+			IconAction(LineIcons.Settings, "Réglages", { inOnScreen(PhoneScreen.Settings) }, inTint = PontColors.text)
 		}
-		LinkHero(inLook.look, inLook.title, inLook.detail)
-		if (inState.pcs.isNotEmpty()) MissingPermissions(inResumes)
-		inState.forgotten?.let { Text("$it a oublié ce téléphone : la paire est effacée des deux côtés.", style = Pont.type.body.copy(color = Pont.colors.textMuted)) }
-		Column {
-			SectionTitle("Derniers échanges")
-			PontCard {
-				Text("Rien d'échangé pour l'instant.", style = Pont.type.body)
-				Text("Les textes copiés et les fichiers envoyés entre le téléphone et le PC apparaîtront ici.", style = Pont.type.bodySmall)
-			}
+	) {
+		LinkHero(inLook.look, inLook.muted, inLook.strong, inLook.detail)
+		if (inState.pcs.isEmpty())
+		{
+			SilverButton("Appairer un PC", { inOnScreen(PhoneScreen.Devices) })
+			return@KeyScreen
+		}
+		MissingPermissions(inResumes)
+		inState.forgotten?.let { BasicText("$it a oublié ce téléphone : la paire est effacée des deux côtés.", style = vType.bodySmall) }
+		SettingsSection("Derniers échanges") {
+			BasicText("Rien d'échangé pour l'instant.", style = vType.body)
+			BasicText("Les textes copiés et les fichiers envoyés entre le téléphone et le PC apparaîtront ici.", style = vType.bodySmall)
 		}
 	}
 }

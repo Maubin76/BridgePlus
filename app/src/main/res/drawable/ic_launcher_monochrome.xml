@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Généré par LogoAssetsTest : pont évidé du « + », pour les icônes thématiques. -->
+<!-- Généré par LogoAssetsTest : pont et « + », pour les icônes thématiques. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
 	android:width="108dp"
 	android:height="108dp"
@@ -8,5 +8,5 @@
 	<path
 		android:fillColor="#FF000000"
 		android:fillType="evenOdd"
-		android:pathData="M22,47 H86 V53 H22 Z M28,81 V79 A26,26 0 0 1 80,79 V81 H73 V79 A19,19 0 0 0 35,79 V81 Z M51.5,27 H56.5 V31.5 H61 V36.5 H56.5 V41 H51.5 V36.5 H47 V31.5 H51.5 Z" />
+		android:pathData="M33.84,49.59 L74.16,49.59 L74.16,53.37 L33.84,53.37 Z M37.62,71.01 L37.62,69.75 A16.38,16.38 0 0 1 70.38,69.75 L70.38,71.01 L65.97,71.01 L65.97,69.75 A11.97,11.97 0 0 0 42.03,69.75 L42.03,71.01 Z M52.43,36.99 L55.58,36.99 L55.58,39.83 L58.41,39.83 L58.41,42.98 L55.58,42.98 L55.58,45.81 L52.43,45.81 L52.43,42.98 L49.59,42.98 L49.59,39.83 L52.43,39.83 Z" />
 </vector>

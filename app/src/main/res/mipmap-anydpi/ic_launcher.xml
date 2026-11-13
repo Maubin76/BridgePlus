@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Icône adaptative : fond orange, pont blanc (premier plan généré par LogoAssetsTest). -->
+<!-- Icône adaptative, comme celle de KeePlus : plaque brossée plein cadre (fond), pont gravé (premier plan), images générées par LogoAssetsTest. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-	<background android:drawable="@color/accent" />
-	<foreground android:drawable="@drawable/ic_launcher_foreground" />
+	<background android:drawable="@mipmap/ic_launcher_background" />
+	<foreground android:drawable="@mipmap/ic_launcher_foreground" />
 	<monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

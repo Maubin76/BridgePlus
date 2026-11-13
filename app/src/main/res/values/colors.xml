@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<!-- Accent de PontPlus (orange international), fond de l'icône. -->
-	<color name="accent">#FFB8401F</color>
-	<!-- Fond des écrans, clair : fenêtre au lancement, sans saut avec Compose. -->
-	<color name="ground">#FFFAF8F6</color>
+	<!-- Fond des écrans (sombre uniquement, comme KeePlus) : fenêtre au lancement, sans saut avec Compose. -->
+	<color name="ground">#FF0B0B0C</color>
 </resources>

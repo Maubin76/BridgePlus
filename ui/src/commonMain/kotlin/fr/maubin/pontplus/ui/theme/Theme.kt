@@ -1,15 +1,10 @@
 package fr.maubin.pontplus.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -24,80 +19,39 @@ import fr.maubin.pontplus.ui.resources.satoshi_regular
 import org.jetbrains.compose.resources.Font
 
 /*
-	Couleurs de PontPlus (voir DESIGN.md) : fonds neutres légèrement chauds,
-	un seul accent, l'orange international du Golden Gate, et deux couleurs
-	d'état. Une palette claire et une sombre, choisies selon le système.
-	ground      : fond des écrans
-	surface     : cartes, champs
-	surfaceHigh : pastilles, survol, cartes en relief
-	rule        : contours, séparateurs
-	text        : texte principal
-	textMuted   : texte secondaire (au moins 4.5:1 sur ground, surface et surfaceHigh)
-	textFaint   : indications non essentielles
-	accent      : accent (boutons principaux, liaison établie, logo)
-	onAccent    : texte sur l'accent
-	accentSoft  : fond discret teinté d'accent (pastille de l'état relié)
-	success     : réussite
-	danger      : erreur, suppression
-	isDark      : vrai pour la palette sombre
+	Couleurs de PontPlus, celles de KeePlus (voir DESIGN.md) : monochrome
+	noir et argent, deux couleurs d'état.
 */
 @Immutable
-data class PontColors(
-	val ground      : Color,
-	val surface     : Color,
-	val surfaceHigh : Color,
-	val rule        : Color,
-	val text        : Color,
-	val textMuted   : Color,
-	val textFaint   : Color,
-	val accent      : Color,
-	val onAccent    : Color,
-	val accentSoft  : Color,
-	val success     : Color,
-	val danger      : Color,
-	val isDark      : Boolean
-)
-
-// Palette claire.
-val kLightColors = PontColors(
-	ground      = Color(0xFFFAF8F6),
-	surface     = Color(0xFFFFFFFF),
-	surfaceHigh = Color(0xFFF2EEEA),
-	rule        = Color(0xFFE6E0DA),
-	text        = Color(0xFF1C1816),
-	textMuted   = Color(0xFF5F5751),
-	textFaint   = Color(0xFF7D746D),
-	accent      = Color(0xFFB8401F),
-	onAccent    = Color(0xFFFFFFFF),
-	accentSoft  = Color(0xFFF8E4DB),
-	success     = Color(0xFF2D7A57),
-	danger      = Color(0xFFB3261E),
-	isDark      = false
-)
-
-// Palette sombre.
-val kDarkColors = PontColors(
-	ground      = Color(0xFF121010),
-	surface     = Color(0xFF1C1917),
-	surfaceHigh = Color(0xFF262220),
-	rule        = Color(0xFF36312E),
-	text        = Color(0xFFF3EFEC),
-	textMuted   = Color(0xFFADA49E),
-	textFaint   = Color(0xFF8C847E),
-	accent      = Color(0xFFFF8A5C),
-	onAccent    = Color(0xFF2A0E04),
-	accentSoft  = Color(0xFF3B2219),
-	success     = Color(0xFF6FC59A),
-	danger      = Color(0xFFF2827A),
-	isDark      = true
-)
+object PontColors
+{
+	val void           = Color(0xFF050505)											// bas de la brume, fond le plus profond
+	val ground         = Color(0xFF0B0B0C)											// fond des écrans de travail
+	val mistTop        = Color(0xFF9A9A9C)											// haut de la brume
+	val mistMid        = Color(0xFF3A3A3C)											// milieu de la brume
+	val surface        = Color(0xFF141415)											// cartes, champs
+	val surfaceHigh    = Color(0xFF1C1C1E)											// dialogues, icônes d'appareil
+	val surfaceHighest = Color(0xFF262628)											// pastille active, survol
+	val rule           = Color(0xFF2A2A2C)											// contours, séparateurs
+	val gridLine       = Color(0x0FFFFFFF)											// trait de la grille
+	val gridLineLit    = Color(0x2EFFFFFF)											// trait de la grille illuminée
+	val emblem         = Color(0xFF2E2E30)											// grand pont flou du décor
+	val text           = Color(0xFFF5F5F5)											// texte principal
+	val textMuted      = Color(0xFF9C9C9E)											// texte secondaire, mot gris des titres
+	val textFaint      = Color(0xFF6A6A6C)											// indications non essentielles
+	val silverLight    = Color(0xFFF2F2F2)											// haut du bouton argent
+	val silverDark     = Color(0xFFB8B8BA)											// bas du bouton argent
+	val silverInk      = Color(0xFF111111)											// texte sur l'argent
+	val danger         = Color(0xFFD9645F)											// erreur, refus, oubli
+	val success        = Color(0xFF6FB592)											// appairage réussi
+}
 
 /*
-	Styles de texte de PontPlus (voir DESIGN.md) ; les noms Material 3 servent
-	de correspondance pour les composants standard.
-	hero      : très grand état de la liaison
-	display   : grand titre d'écran
-	headline  : titre de section
+	Styles de texte de PontPlus, ceux de KeePlus (voir DESIGN.md) ; les noms
+	Material 3 servent de correspondance pour les composants standard.
+	hero      : très grand titre fin des écrans clés (état de la liaison)
+	display   : grand titre
+	headline  : titre d'écran de travail, de dialogue
 	title     : titre d'élément (appareil, carte)
 	body      : texte courant
 	bodySmall : texte secondaire
@@ -114,23 +68,6 @@ data class PontType(
 	val label     : TextStyle
 )
 
-private val LocalPontColors = staticCompositionLocalOf { kLightColors }			// palette en cours
-private val LocalPontType   = staticCompositionLocalOf<PontType?> { null }		// styles de texte en cours
-
-/*
-	Accès au thème de PontPlus depuis les composants.
-*/
-object Pont
-{
-	// Palette en cours.
-	val colors: PontColors
-		@Composable @ReadOnlyComposable get() = LocalPontColors.current
-
-	// Styles de texte en cours.
-	val type: PontType
-		@Composable @ReadOnlyComposable get() = LocalPontType.current ?: error("PontPlusTheme absent")
-}
-
 /*
 	Police Satoshi, dans les graisses utilisées.
 */
@@ -143,82 +80,60 @@ fun satoshi(): FontFamily = FontFamily(
 )
 
 /*
-	Styles de texte, construits avec la police chargée et la palette.
-	inColors : palette
+	Styles de texte, construits avec la police chargée.
 */
 @Composable
-fun pontType(inColors: PontColors): PontType
+fun pontType(): PontType
 {
 	val vSans = satoshi()																	// Satoshi
 	return PontType(
-		hero      = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Light, fontSize = 40.sp, lineHeight = 46.sp, letterSpacing = (-0.025).em, color = inColors.text),
-		display   = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Light, fontSize = 30.sp, lineHeight = 36.sp, letterSpacing = (-0.02).em, color = inColors.text),
-		headline  = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Normal, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.01).em, color = inColors.text),
-		title     = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp, color = inColors.text),
-		body      = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp, color = inColors.text),
-		bodySmall = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp, letterSpacing = 0.005.em, color = inColors.textMuted),
-		label     = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.01.em, color = inColors.text)
+		hero      = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Light, fontSize = 44.sp, lineHeight = 50.sp, letterSpacing = (-0.025).em, color = PontColors.text),
+		display   = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Light, fontSize = 34.sp, lineHeight = 40.sp, letterSpacing = (-0.02).em, color = PontColors.text),
+		headline  = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Normal, fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = (-0.01).em, color = PontColors.text),
+		title     = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 24.sp, color = PontColors.text),
+		body      = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp, color = PontColors.text),
+		bodySmall = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp, letterSpacing = 0.005.em, color = PontColors.textMuted),
+		label     = TextStyle(fontFamily = vSans, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.01.em, color = PontColors.text)
 	)
 }
 
 /*
-	Thème de PontPlus, clair ou sombre selon le système : palette et styles de
-	la direction artistique, et Material 3 accordé pour les composants
-	standard (champs, menus, dialogues).
-	inDark    : palette sombre
+	Thème de PontPlus, sombre uniquement comme KeePlus : Material 3 aux
+	couleurs et polices de la direction artistique, pour les composants
+	standard (champs, menus).
 	inContent : contenu
 */
 @Composable
-fun PontPlusTheme(
-	inDark    : Boolean = isSystemInDarkTheme(),
-	inContent : @Composable () -> Unit
-)
+fun PontPlusTheme(inContent: @Composable () -> Unit)
 {
-	val vColors = if (inDark) kDarkColors else kLightColors								// palette
-	val vType   = pontType(vColors)														// styles de texte
-	val vScheme = if (inDark) darkColorScheme(
-		primary              = vColors.accent,
-		onPrimary            = vColors.onAccent,
-		secondary            = vColors.textMuted,
-		background           = vColors.ground,
-		onBackground         = vColors.text,
-		surface              = vColors.surface,
-		onSurface            = vColors.text,
-		surfaceVariant       = vColors.surfaceHigh,
-		onSurfaceVariant     = vColors.textMuted,
-		surfaceContainer     = vColors.surface,
-		surfaceContainerHigh = vColors.surfaceHigh,
-		outline              = vColors.textMuted,
-		outlineVariant       = vColors.rule,
-		error                = vColors.danger
-	) else lightColorScheme(
-		primary              = vColors.accent,
-		onPrimary            = vColors.onAccent,
-		secondary            = vColors.textMuted,
-		background           = vColors.ground,
-		onBackground         = vColors.text,
-		surface              = vColors.surface,
-		onSurface            = vColors.text,
-		surfaceVariant       = vColors.surfaceHigh,
-		onSurfaceVariant     = vColors.textMuted,
-		surfaceContainer     = vColors.surface,
-		surfaceContainerHigh = vColors.surfaceHigh,
-		outline              = vColors.textMuted,
-		outlineVariant       = vColors.rule,
-		error                = vColors.danger
+	val vType   = pontType()																// styles de PontPlus
+	val vColors = darkColorScheme(
+		primary              = PontColors.text,
+		onPrimary            = PontColors.void,
+		secondary            = PontColors.textMuted,
+		onSecondary          = PontColors.void,
+		background           = PontColors.ground,
+		onBackground         = PontColors.text,
+		surface              = PontColors.surface,
+		onSurface            = PontColors.text,
+		surfaceVariant       = PontColors.surfaceHigh,
+		onSurfaceVariant     = PontColors.textMuted,
+		surfaceContainer     = PontColors.surface,
+		surfaceContainerHigh = PontColors.surfaceHigh,
+		outline              = PontColors.textMuted,
+		outlineVariant       = PontColors.rule,
+		error                = PontColors.danger,
+		onError              = PontColors.void
 	)																						// couleurs Material 3
 	val vMaterial = Typography(
 		displayLarge   = vType.hero,
 		displayMedium  = vType.display,
 		headlineMedium = vType.headline,
-		titleLarge     = vType.headline,
 		titleMedium    = vType.title,
 		bodyLarge      = vType.body,
 		bodyMedium     = vType.body,
 		bodySmall      = vType.bodySmall,
 		labelLarge     = vType.label
 	)																						// polices Material 3
-	CompositionLocalProvider(LocalPontColors provides vColors, LocalPontType provides vType) {
-		MaterialTheme(colorScheme = vScheme, typography = vMaterial, content = inContent)
-	}
+	MaterialTheme(colorScheme = vColors, typography = vMaterial, content = inContent)
 }

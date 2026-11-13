@@ -2,63 +2,70 @@ package fr.maubin.pontplus.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import fr.maubin.pontplus.ui.icons.LineIcons
-import fr.maubin.pontplus.ui.theme.Pont
 import fr.maubin.pontplus.ui.theme.PontColors
+import fr.maubin.pontplus.ui.theme.pontType
+
+private val kPill = RoundedCornerShape(percent = 50)								// forme en pilule
 
 /*
 	Vrai si les animations sont permises. Chaque plateforme le fournit selon
 	le réglage du système (Android : « Supprimer les animations » ; Windows :
-	« Afficher les animations ») ; sans animation, les changements sont
+	« Effets d'animation ») ; sans animation, seuls restent des changements
 	instantanés.
 */
 val LocalAnimationsEnabled = staticCompositionLocalOf { true }
 
 /*
-	Allure d'un état de la liaison : toujours une icône, un texte et une
-	couleur, jamais la couleur seule.
+	Allure d'un état de la liaison : toujours une icône et un texte, jamais
+	une couleur seule (le monochrome n'en a d'ailleurs presque pas).
 	icon : icône
-	tint : couleur de l'icône (selon la palette)
+	tint : couleur de l'icône
 */
 enum class LinkLook(
 	val icon : ImageVector,
-	val tint : (PontColors) -> Color
+	val tint : Color
 )
 {
-	Connected(LineIcons.Linked, { it.accent }),										// relié
-	Searching(LineIcons.Searching, { it.textMuted }),									// connexion en cours
-	Absent(LineIcons.Unlinked, { it.textMuted }),										// appareil injoignable
-	Refused(LineIcons.Alert, { it.danger }),											// refusé par l'autre appareil
-	AwayFromHome(LineIcons.AwayFromHome, { it.textMuted }),							// hors du réseau de la maison
-	Off(LineIcons.Off, { it.textMuted })												// liaison arrêtée
+	Connected(LineIcons.Linked, PontColors.text),										// relié
+	Searching(LineIcons.Searching, PontColors.textMuted),								// connexion en cours
+	Absent(LineIcons.Unlinked, PontColors.textMuted),									// appareil injoignable
+	Refused(LineIcons.Alert, PontColors.danger),										// refusé par l'autre appareil
+	AwayFromHome(LineIcons.AwayFromHome, PontColors.textMuted),						// hors du réseau de la maison
+	Off(LineIcons.Off, PontColors.textMuted)											// liaison arrêtée
 }
 
 /*
-	Pastille d'état : icône et texte courts (liste des appareils).
+	Pastille d'état (liste des appareils) : relié, fond clair et texte
+	sombre comme une pastille active de KeePlus ; sinon, contour fin.
 	inLook     : état
 	inText     : texte (« Relié », « Absent »…)
 	inModifier : modificateur
@@ -70,58 +77,68 @@ fun StatusPill(
 	inModifier : Modifier = Modifier
 )
 {
-	val vColors = Pont.colors																// palette
-	val vBack   = if (inLook == LinkLook.Connected) vColors.accentSoft else vColors.surfaceHigh	// fond
+	val vLit = inLook == LinkLook.Connected													// pastille allumée
 	Row(
-		modifier              = inModifier.background(vBack, RoundedCornerShape(999.dp)).padding(horizontal = 10.dp, vertical = 4.dp),
+		modifier              = inModifier
+			.clip(kPill)
+			.background(if (vLit) PontColors.text else Color.Transparent)
+			.border(1.dp, if (vLit) PontColors.text else PontColors.rule, kPill)
+			.padding(horizontal = 10.dp, vertical = 4.dp),
 		verticalAlignment     = Alignment.CenterVertically,
 		horizontalArrangement = Arrangement.spacedBy(6.dp)
 	) {
-		Icon(inLook.icon, contentDescription = null, tint = inLook.tint(vColors), modifier = Modifier.size(16.dp))
-		Text(inText, style = Pont.type.bodySmall.copy(color = vColors.text))
+		Icon(inLook.icon, contentDescription = null, tint = if (vLit) PontColors.void else inLook.tint, modifier = Modifier.size(14.dp))
+		BasicText(inText, style = pontType().bodySmall.copy(color = if (vLit) PontColors.void else PontColors.text))
 	}
 }
 
 /*
-	État de la liaison en grand (haut de l'accueil) : icône dans un disque,
-	titre en très grand, précision dessous. Le changement d'état se fait en
-	fondu, ou d'un coup si les animations sont coupées.
+	État de la liaison en grand (accueil) : icône dans un disque, puis titre
+	très grand et fin en deux tons, comme les titres de KeePlus (le contexte
+	en gris, le mot fort en blanc), et une précision dessous. Le changement
+	d'état se fait en fondu, ou d'un coup si les animations sont coupées.
 	inLook     : état
-	inTitle    : titre (« Relié à Bureau »)
+	inMuted    : début du titre, en gris (« Relié à ») ; vide sans
+	inStrong   : fin du titre, en blanc (« Bureau. »)
 	inDetail   : précision ; null sans
 	inModifier : modificateur
 */
 @Composable
 fun LinkHero(
 	inLook     : LinkLook,
-	inTitle    : String,
+	inMuted    : String,
+	inStrong   : String,
 	inDetail   : String?,
 	inModifier : Modifier = Modifier
 )
 {
-	val vColors  = Pont.colors																// palette
 	val vAnimate = LocalAnimationsEnabled.current											// animations permises
+	val vType    = pontType()																// styles de texte
 	AnimatedContent(
-		targetState    = Triple(inLook, inTitle, inDetail),
+		targetState    = listOf(inLook.name, inMuted, inStrong, inDetail.orEmpty()),
 		modifier       = inModifier,
-		transitionSpec = { if (vAnimate) fadeIn() togetherWith fadeOut() else fadeIn(snap()) togetherWith fadeOut(snap()) },
+		transitionSpec = { if (vAnimate) fadeIn(tween(220)) togetherWith fadeOut(tween(220)) else fadeIn(snap()) togetherWith fadeOut(snap()) },
 		label          = "état de la liaison"
-	) { (vLook, vTitle, vDetail) ->
-		Column(Modifier.semantics(mergeDescendants = true) { contentDescription = listOfNotNull(vTitle, vDetail).joinToString(". ") }) {
-			val vRing = if (vLook == LinkLook.Connected) vColors.accentSoft else vColors.surfaceHigh	// disque de l'icône
+	) { vState ->
+		val vLook = LinkLook.valueOf(vState[0])														// état affiché
+		Column(
+			Modifier.semantics(mergeDescendants = true) { contentDescription = listOf(vState[1] + vState[2], vState[3]).filter { it.isNotBlank() }.joinToString(". ") },
+			verticalArrangement = Arrangement.spacedBy(14.dp)
+		) {
 			Icon(
 				vLook.icon,
 				contentDescription = null,
-				tint               = vLook.tint(vColors),
-				modifier           = Modifier.size(56.dp).background(vRing, CircleShape).padding(14.dp)
+				tint               = vLook.tint,
+				modifier           = Modifier.size(52.dp).clip(CircleShape).background(PontColors.surfaceHigh).border(1.dp, PontColors.rule, CircleShape).padding(14.dp)
 			)
-			Spacer(Modifier.height(20.dp))
-			Text(vTitle, style = Pont.type.hero)
-			if (vDetail != null)
-			{
-				Spacer(Modifier.height(8.dp))
-				Text(vDetail, style = Pont.type.body.copy(color = vColors.textMuted))
-			}
+			BasicText(
+				buildAnnotatedString {
+					withStyle(SpanStyle(color = PontColors.textMuted)) { append(vState[1]) }
+					append(vState[2])
+				},
+				style = vType.hero
+			)
+			if (vState[3].isNotEmpty()) BasicText(vState[3], style = vType.bodySmall)
 		}
 	}
 }

@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -44,10 +44,10 @@ import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
-import androidx.compose.ui.graphics.Color
-import fr.maubin.pontplus.ui.components.SecondaryButton
-import fr.maubin.pontplus.ui.theme.Pont
+import fr.maubin.pontplus.ui.components.GhostButton
+import fr.maubin.pontplus.ui.theme.PontColors
 import fr.maubin.pontplus.ui.theme.PontPlusTheme
+import fr.maubin.pontplus.ui.theme.pontType
 import java.util.concurrent.Executors
 
 /*
@@ -68,7 +68,7 @@ private fun decodeQr(
 }
 
 /*
-	Lecteur de QR code plein écran, toujours sombre : aperçu de l'appareil photo (dos) ; rend
+	Lecteur de QR code plein écran : aperçu de l'appareil photo (dos) ; rend
 	le premier QR code lu. Demande l'autorisation de l'appareil photo ;
 	refusée, explique et propose de fermer.
 	inOnResult : contenu du QR code lu
@@ -80,25 +80,25 @@ fun QrScannerDialog(
 	inOnClose  : () -> Unit
 )
 {
-	val vType    = Pont.type																	// styles de texte
+	val vType    = pontType()																	// styles de texte
 	val vContext = LocalContext.current														// contexte
 	var vAllowed by remember { mutableStateOf(ContextCompat.checkSelfPermission(vContext, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }	// appareil photo autorisé
 	val vAsk     = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vAllowed = it }	// demande d'autorisation
 	LaunchedEffect(Unit) { if (!vAllowed) vAsk.launch(Manifest.permission.CAMERA) }
-	Dialog(onDismissRequest = inOnClose, properties = DialogProperties(usePlatformDefaultWidth = false)) { PontPlusTheme(inDark = true) {
-		Box(Modifier.fillMaxSize().background(Color.Black)) {
+	Dialog(onDismissRequest = inOnClose, properties = DialogProperties(usePlatformDefaultWidth = false)) { PontPlusTheme {
+		Box(Modifier.fillMaxSize().background(PontColors.void)) {
 			if (vAllowed) CameraPreview(inOnResult)
-			Text("Scanner le QR code du PC", Modifier.statusBarsPadding().padding(24.dp), style = vType.headline.copy(color = Color.White))
+			BasicText("Scanner le QR code du PC", Modifier.statusBarsPadding().padding(24.dp), style = vType.headline)
 			Column(
-				Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(Color.Black.copy(alpha = 0.7f)).navigationBarsPadding().padding(24.dp),
+				Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(PontColors.void.copy(alpha = 0.7f)).navigationBarsPadding().padding(24.dp),
 				verticalArrangement = Arrangement.spacedBy(16.dp)
 			) {
-				Text(
+				BasicText(
 					if (vAllowed) "Sur le PC : PontPlus › Appairer un téléphone, puis visez le QR code."
 					else "PontPlus a besoin de l'appareil photo pour lire le QR code affiché par le PC.",
-					style = vType.body.copy(color = Color.White)
+					style = vType.body
 				)
-				SecondaryButton("Fermer", inOnClose)
+				GhostButton("Fermer", inOnClose)
 			}
 		}
 	} }

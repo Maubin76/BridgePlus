@@ -46,17 +46,24 @@ fun appVersion(): String? =
 	runCatching { DesktopApp::class.java.getResourceAsStream("/version.properties")?.use { Properties().apply { load(it) }.getProperty("version") } }.getOrNull()
 
 /*
-	Allure de l'état de la liaison du PC : icône et texte (zone de
-	notification, accueil de la fenêtre).
+	Allure de l'état de la liaison du PC : icône et titre en deux tons
+	(accueil de la fenêtre), texte court (info-bulle de la zone de
+	notification).
 	look   : état
-	title  : texte court (info-bulle, titre)
+	muted  : début du titre, en gris
+	strong : fin du titre, en blanc
 	detail : précision ; null sans
 */
 data class PcLook(
 	val look   : LinkLook,
-	val title  : String,
+	val muted  : String,
+	val strong : String,
 	val detail : String?
 )
+{
+	// Titre d'une traite, sans point final (info-bulle).
+	val title: String get() = (muted + strong).trimEnd('.')
+}
 
 /*
 	État de la liaison du PC, en clair.
@@ -67,11 +74,12 @@ fun pcLook(inState: PcLinkState): PcLook
 	val vConnected = inState.phones.filter { it.id in inState.connected }.map { it.label }	// téléphones reliés
 	return when
 	{
-		inState.error != null      -> PcLook(LinkLook.Refused, "Écoute impossible", inState.error)
-		inState.phones.isEmpty()   -> PcLook(LinkLook.Off, "Aucun téléphone appairé", "Appairez un téléphone pour commencer.")
-		!inState.onHome            -> PcLook(LinkLook.AwayFromHome, "Hors du réseau de la maison", "PontPlus attend le retour sur le réseau de la maison.")
-		vConnected.isNotEmpty()    -> PcLook(LinkLook.Connected, "Relié à ${vConnected.joinToString(" et ")}", null)
-		else                       -> PcLook(LinkLook.Absent, if (inState.phones.size == 1) "${inState.phones.single().label} est absent" else "Téléphones absents", "La liaison reprendra dès que le téléphone sera sur le Wi-Fi de la maison.")
+		inState.error != null      -> PcLook(LinkLook.Refused, "Écoute ", "impossible.", inState.error)
+		inState.phones.isEmpty()   -> PcLook(LinkLook.Off, "Aucun téléphone ", "appairé.", "Appairez un téléphone pour commencer.")
+		!inState.onHome            -> PcLook(LinkLook.AwayFromHome, "Hors du réseau ", "de la maison.", "PontPlus attend le retour sur le réseau de la maison.")
+		vConnected.isNotEmpty()    -> PcLook(LinkLook.Connected, "Relié à ", "${vConnected.joinToString(" et ")}.", null)
+		inState.phones.size == 1   -> PcLook(LinkLook.Absent, "${inState.phones.single().label} est ", "absent.", "La liaison reprendra dès que le téléphone sera sur le Wi-Fi de la maison.")
+		else                       -> PcLook(LinkLook.Absent, "Téléphones ", "absents.", "La liaison reprendra dès qu'un téléphone sera sur le Wi-Fi de la maison.")
 	}
 }
 
