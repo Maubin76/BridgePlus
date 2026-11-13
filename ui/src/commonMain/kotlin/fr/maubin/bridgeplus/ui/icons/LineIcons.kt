@@ -296,4 +296,40 @@ object LineIcons
 		"M9 16 a4.2 4.2 0 0 1 6 0",
 		"M12 19.2 V19.4"
 	)
+
+	// Envoyé : flèche qui monte vers l'autre appareil.
+	val Sent: ImageVector = lineIcon(
+		"Envoyé",
+		"M12 19 V5",
+		"M6.5 10.5 L12 5 L17.5 10.5"
+	)
+
+	// Reçu : flèche qui descend de l'autre appareil.
+	val Received: ImageVector = lineIcon(
+		"Reçu",
+		"M12 5 V19",
+		"M6.5 13.5 L12 19 L17.5 13.5"
+	)
+
+	// Épingler : punaise.
+	val Pin: ImageVector = lineIcon(
+		"Épingler",
+		"M9 4 H15 L14 10 L17.5 13.5 H6.5 L10 10 Z",
+		"M12 13.5 V20"
+	)
+
+	// Historique : horloge avec flèche de retour.
+	val History: ImageVector = lineIcon(
+		"Historique",
+		"M4.5 12 a7.5 7.5 0 1 0 2.2 -5.3",
+		"M4 4.5 V8 H7.5",
+		"M12 8 V12 L15 14"
+	)
+
+	// Transferts : deux flèches opposées, l'une monte, l'autre descend.
+	val Transfers: ImageVector = lineIcon(
+		"Transferts",
+		"M8 19 V5", "M4.5 8.5 L8 5 L11.5 8.5",
+		"M16 5 V19", "M12.5 15.5 L16 19 L19.5 15.5"
+	)
 }

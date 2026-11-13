@@ -1,5 +1,6 @@
 package fr.maubin.bridgeplus
 
+import android.content.ClipboardManager
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -32,6 +33,7 @@ import fr.maubin.bridgeplus.ui.theme.BridgePlusTheme
 enum class PhoneScreen
 {
 	Home,																					// état de la liaison, derniers échanges
+	History,																				// historique du presse-papiers
 	Devices,																				// PC appairés, appairage
 	Settings																				// réseau de la maison, autorisations
 }
@@ -80,13 +82,16 @@ fun phoneLook(
 }
 
 /*
-	Activité principale : accueil, appareils, réglages. À
-	chaque retour à l'écran, l'écoute des Wi-Fi est réinscrite et la liaison
-	relancée si le téléphone est à la maison (démarrage permis : l'appli est
-	au premier plan).
+	Activité principale : accueil, historique, appareils, réglages. À chaque retour à
+	l'écran, l'écoute des Wi-Fi est réinscrite et la liaison relancée si le
+	téléphone est à la maison (démarrage permis : l'appli est au premier
+	plan). Tant qu'elle est affichée, le presse-papiers part de lui-même vers
+	le PC (à l'ouverture et à chaque copie).
 */
 class MainActivity : ComponentActivity()
 {
+	private val fClipListener = ClipboardManager.OnPrimaryClipChangedListener { sendForeground() }	// copie faite pendant que l'appli est affichée
+
 	@Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")								// convention « in » des paramètres
 	override fun onCreate(inState: Bundle?)
 	{
@@ -107,6 +112,30 @@ class MainActivity : ComponentActivity()
 		super.onResume()
 		NetworkWatch.register(this)
 		LinkService.startIfHome(this)
+		getSystemService(ClipboardManager::class.java)?.addPrimaryClipChangedListener(fClipListener)
+	}
+
+	override fun onPause()
+	{
+		getSystemService(ClipboardManager::class.java)?.removePrimaryClipChangedListener(fClipListener)
+		super.onPause()
+	}
+
+	override fun onWindowFocusChanged(inFocus: Boolean)
+	{
+		super.onWindowFocusChanged(inFocus)
+		if (inFocus) sendForeground()
+	}
+
+	/*
+		Envoi automatique quand l'appli est au premier plan (seul moment où
+		Android la laisse lire le presse-papiers) : la copie part si l'envoi
+		automatique est activé ; un texte déjà échangé ne repart pas.
+	*/
+	private fun sendForeground()
+	{
+		if (bridgeLink.state.value.connected.isEmpty()) return
+		readClipboard(this).let { bridgeApp.sendClip(it.text, it.sensitive, false) }
 	}
 }
 
@@ -131,6 +160,7 @@ fun PhoneApp()
 	when (vScreen)
 	{
 		PhoneScreen.Home     -> HomeScreen(vState, phoneLook(vState, vNetwork, vOnHome), vResumes) { vScreen = it }
+		PhoneScreen.History  -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { HistoryScreen(vHome) }
 		PhoneScreen.Devices  -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { DevicesScreen(vState, vHome) }
 		PhoneScreen.Settings -> CompositionLocalProvider(LocalButtonScale provides 0.8f) { SettingsScreen(vState, vNetwork, vResumes, vHome) }
 	}

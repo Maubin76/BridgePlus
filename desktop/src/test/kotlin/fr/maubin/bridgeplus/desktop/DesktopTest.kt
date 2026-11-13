@@ -5,12 +5,14 @@ import fr.maubin.bridgeplus.peers.PairedPhone
 import fr.maubin.bridgeplus.peers.PcLinkState
 import fr.maubin.bridgeplus.ui.components.LinkLook
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /*
 	Appli PC sans fenêtre : lecture des sorties de Windows (Wi-Fi, route par
-	défaut) et état de la liaison affiché.
+	défaut), état de la liaison affiché, raccourci de la carte.
 */
 class DesktopTest
 {
@@ -72,5 +74,39 @@ class DesktopTest
 		assertEquals("Relié à Pixel", pcLook(vHome.copy(connected = setOf("t1"))).title)
 		assertEquals("Pixel est absent", pcLook(vHome).title)
 		assertEquals(LinkLook.Refused, pcLook(vHome.copy(error = "port pris")).look)
+	}
+
+	/*
+		Raccourci : Ctrl+Alt+V par défaut, permis (AltGr+V ne tape rien en
+		AZERTY) ; Ctrl+Alt+E (« € ») et Ctrl+Alt+2 (« ~ ») refusés, comme une
+		touche sans modificateur ; un raccourci illisible revient au défaut.
+	*/
+	@Test
+	fun hotkeys()
+	{
+		val vDefault = Hotkey.parse(kDefaultHotkey)													// raccourci par défaut
+		assertTrue(vDefault.usable)
+		assertEquals("Ctrl + Alt + V", vDefault.label())
+		assertEquals(0x0001 or 0x0002, vDefault.modifiers)
+		assertFalse(Hotkey(ctrl = true, alt = true, shift = false, win = false, key = 'E'.code).usable)
+		assertFalse(Hotkey(ctrl = true, alt = true, shift = false, win = false, key = '2'.code).usable)
+		assertFalse(Hotkey(ctrl = false, alt = false, shift = true, win = false, key = 'V'.code).usable)
+		assertTrue(Hotkey(ctrl = false, alt = true, shift = false, win = true, key = 'V'.code).usable)
+		assertEquals("Win+Alt+V".let(Hotkey::parse).spec(), "Alt+Win+V")
+		assertEquals(vDefault, Hotkey.parse("n'importe quoi"))
+	}
+
+	/*
+		Lancements par un bouton de notification ou par l'Explorateur :
+		argument lu ; lien ne portant qu'un identifiant (encodé), jamais un
+		chemin.
+	*/
+	@Test
+	fun launchArguments()
+	{
+		assertEquals("C:/Users/moi/photo.jpg", argAfter(arrayOf("--envoyer", "C:/Users/moi/photo.jpg"), ExplorerMenu.kSendArg))
+		assertNull(argAfter(arrayOf("--envoyer"), ExplorerMenu.kSendArg))
+		assertNull(argAfter(arrayOf("--demarrage"), kLinkArg))
+		assertEquals("bridgeplus:ouvrir?id=a%2Bb%3D", WinToast.link("ouvrir", "a+b="))
 	}
 }

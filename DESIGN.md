@@ -125,6 +125,10 @@ Un **pont noir** (tablier fin posé sur une arche) surmonté du « + » de la ga
 - **Sections** (`SettingsSection`) : titre discret en `body-small`, puis une carte `surface` au contour `rule`, rayon `card`.
 - **Pastilles de choix** (`FilterPill`) : oui ou non (« Activé » / « Désactivé »), réseaux de la maison. Pas d'interrupteur.
 - **Ligne d'appareil** : icône dans un carré `surface-high` (rayon `device-icon`), nom en `title`, pastille d'état et « vu il y a… », actions renommer et oublier en icônes rondes. Pas de séparateur.
+- **Ligne d'échange** (`ClipRow`) : sens dans un petit carré `surface-high` (flèche qui monte : envoyé ; qui descend : reçu), texte sur une ligne, puis « Vers Bureau · il y a 2 min » en `body-small`.
+- **Ligne d'historique** (`HistoryRow`) : flèche de sens en `text-faint`, texte sur deux lignes au plus, « De Pixel · il y a 2 min », épingle (`text` si épinglé, `text-faint` sinon) et croix. La ligne choisie au clavier a un fond `surface-high`.
+- **Carte de l'historique (PC)** : l'encoche de KeePlus, soudée au haut de l'écran (dégradé `black` → `void` → `surface`, liseré `rule` sur les côtés et le bas), qui descend en ressort et remonte en 200 ms ; barre de recherche en pilule, liste épinglés d'abord.
+- **Ligne de transfert** (`TransferRow`) : sens dans un carré `surface-high`, nom, « Vers Pixel · 12,3 Mo sur 50,0 Mo » (raison d'un échec en `danger`), barre d'avancement fine (`ProgressLine` : piste `rule`, partie faite `text`, 4 dp), puis Annuler ou Ouvrir et Dossier.
 - **Dialogues** : carte `surface-high` de rayon 24, titre `headline`, texte `body-small`, deux boutons fantômes.
 - **Encadré d'explication** : carte `surface`, icône `text-muted` et une phrase, avec un lien d'action (autorisations, pare-feu).
 - **Icônes** : le jeu au trait de 1,6 de KeePlus, complété des icônes de la liaison (maillons, maison barrée, ordinateur, téléphone, QR code, Wi-Fi).

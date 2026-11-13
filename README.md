@@ -39,11 +39,51 @@ deux secondes**.
 | Étape | Contenu | État |
 |---|---|---|
 | 1 | Modules, thème, liaison chiffrée, appairage par QR code, connexion permanente avec reconnexion | ✅ |
-| 2 | Presse-papiers dans les deux sens, contenus sensibles exclus | à venir |
-| 3 | Historique chiffré, carte du PC (Ctrl+Alt+V) | à venir |
-| 4 | Envoi de fichiers dans les deux sens | à venir |
+| 2 | Presse-papiers dans les deux sens, contenus sensibles exclus | ✅ (branche `develop`) |
+| 3 | Historique chiffré, carte du PC (Ctrl+Alt+V) | ✅ (branche `develop`) |
+| 4 | Envoi de fichiers dans les deux sens | ✅ (branche `develop`) |
 | 5 | Notifications du téléphone sur le PC | à venir |
 | 6 | Sonnerie, batterie, liens, assistant de premier lancement | à venir |
+
+## Le presse-papiers
+
+- **Du PC vers le téléphone** : chaque texte copié sur le PC arrive dans le presse-papiers du
+  téléphone. Si Android refuse, une notification « Texte reçu » propose **Copier**.
+- **Du téléphone vers le PC** : Android interdit à une appli en arrière-plan de lire le
+  presse-papiers. Trois gestes : la **tuile de réglages rapides** « Envoyer au PC », l'entrée
+  **« Envoyer au PC » du menu de partage**, ou simplement **ouvrir BridgePlus** (la copie part
+  d'elle-même).
+- **Jamais un secret** : ce que KeePlus, KeePass ou un autre gestionnaire marque comme sensible
+  n'est ni lu ni envoyé.
+- Texte seul, 1 Mo au plus. Chaque sens se désactive dans les réglages.
+
+## L'historique
+
+Les 50 derniers textes échangés, et ceux que vous épinglez, sont gardés **chiffrés** sur chaque
+appareil (Keystore sur le téléphone, DPAPI sur le PC).
+
+- **Sur le PC** : `Ctrl+Alt+V` (modifiable) fait descendre une carte en haut de l'écran, depuis
+  n'importe quelle appli. Tapez pour chercher, flèches et Entrée pour copier : la carte remonte et
+  vous pouvez coller aussitôt. Une épingle garde un élément, une croix le supprime.
+- **Sur le téléphone** : l'icône Historique de l'accueil, avec la même recherche ; toucher un
+  élément le copie.
+- Un élément recopié depuis l'historique ne repart pas vers l'autre appareil. « Tout effacer »
+  vide l'historique de l'appareil, épingles comprises.
+
+## Les fichiers
+
+- **Du téléphone vers le PC** : « Envoyer au PC » dans le menu de partage (une ou plusieurs
+  photos, vidéos, documents), ou « Envoyer un fichier » sur l'accueil. Le transfert continue écran
+  éteint ; la notification montre l'avancement, avec **Annuler**.
+- **Du PC vers le téléphone** : glissez des fichiers sur la fenêtre ou sur la carte de
+  l'historique, ou « Envoyer un fichier… » dans le menu de l'icône. En option, « Envoyer au
+  téléphone » dans le menu contextuel de l'Explorateur (réglage de la page Transferts).
+- **Réception** : `Téléchargements\BridgePlus\` sur le PC (modifiable), `Download/BridgePlus/` sur le
+  téléphone (les photos arrivent dans la galerie). Une notification de Windows ou d'Android
+  propose **Ouvrir** et **Ouvrir le dossier**.
+- **Sûr** : empreinte SHA-256 vérifiée à l'arrivée ; écriture sous un nom provisoire, jamais de
+  fichier à moitié écrit visible ; nom déjà pris : « photo (2).jpg », jamais d'écrasement ;
+  espace libre vérifié avant de commencer. Aucune limite de taille.
 
 ## Installer
 

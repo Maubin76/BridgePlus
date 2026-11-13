@@ -50,8 +50,11 @@ val generateVersion = tasks.register("generateVersion") {
 sourceSets.main { resources.srcDir(generateVersion) }
 
 // Tests sans écran, comme sur la CI (Linux) : une fenêtre AWT y serait refusée.
+// Le test du vrai presse-papiers de Windows ne tourne que sur demande (il en remplace le
+// contenu) : ./gradlew :desktop:test -Pbridgeplus.testPressePapiers
 tasks.withType<Test>().configureEach {
 	systemProperty("java.awt.headless", "true")
+	systemProperty("bridgeplus.testPressePapiers", (findProperty("bridgeplus.testPressePapiers") != null).toString())
 }
 
 compose.desktop {

@@ -45,6 +45,21 @@ sequenceDiagram
 - Le contenu en clair commence par un octet de nature : message JSON, ou morceau de fichier binaire (pas de base64 : un fichier ne grossit pas d'un tiers).
 - Une trame fait 64 Mo au plus, comme dans KeePlus.
 
+Le presse-papiers circule dans ces trames, comme message `presse-papiers` (texte de 1 Mo au plus).
+Un contenu marqué sensible n'est **jamais lu** : sur le PC, les marques
+(`ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory` ou
+`CanUploadToCloudClipboard` à 0, `Clipboard Viewer Ignore`) sont vérifiées avant le texte ; sur
+Android, `ClipDescription.EXTRA_IS_SENSITIVE`. Aucun texte échangé n'est écrit dans un journal.
+
+Les **fichiers** passent dans les mêmes trames : une proposition (nom, taille), la réponse du
+destinataire (espace disque), des morceaux binaires de 1 Mo scellés comme le reste, puis l'empreinte
+SHA-256 calculée en route, que le destinataire vérifie avant de ranger le fichier. Le nom reçu est
+nettoyé (aucun chemin, aucun caractère interdit, aucun nom réservé de Windows) : un appareil ne peut
+pas écrire hors du dossier de réception.
+
+Les boutons des notifications de Windows lancent un lien `bridgeplus:` qui ne porte qu'un
+identifiant tiré au hasard, jamais un chemin : une page web qui tenterait ce lien ne peut rien ouvrir.
+
 **En clair sur le réseau** : seulement la présentation (`hello`, nom et version de l'appareil, pour le diagnostic) et les refus (`error`). Rien d'autre.
 
 ## Battement de cœur
@@ -57,8 +72,9 @@ Le PC envoie un `Ping` scellé toutes les 30 s et le téléphone répond `Pong`.
 |---|---|---|
 | Téléphone | `appareils.bin` (stockage privé) | AES-256-GCM, clé du **Keystore Android** (ne quitte pas le matériel sécurisé) ; exclu des sauvegardes et des transferts |
 | PC | `%APPDATA%\BridgePlus\appareils.bin` | **DPAPI** (liée au compte Windows) |
+| Téléphone et PC | `historique/index.bin` et un fichier par texte | même coffret : index (aperçus, dates, épingles) et textes complets scellés séparément, pour ne jamais réécrire tout l'historique |
 
-Un fichier scellé avec une autre clé (autre compte, clé perdue) est mis de côté (`.illisible`), jamais écrasé sans trace ; il faut alors appairer de nouveau.
+Un fichier scellé avec une autre clé (autre compte, clé perdue) est mis de côté (`.illisible`), jamais écrasé sans trace ; il faut alors appairer de nouveau (l'historique, lui, repart vide).
 
 ## Le réseau
 

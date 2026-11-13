@@ -103,7 +103,9 @@ data class PcLinkState(
 	fName        : nom de ce PC
 	fVersion     : version de l'appli
 	fNetworks    : réseaux du PC et adresses de leurs interfaces
-	fOnMessage   : message reçu d'un téléphone (étapes suivantes)
+	fOnMessage   : message reçu d'un téléphone
+	fOnChunk     : morceau de fichier reçu d'un téléphone
+	fOnClosed    : session d'un téléphone fermée (transferts interrompus)
 	fNow         : horloge (ms)
 	fPort        : port du serveur (0 : port libre, tests)
 	fBeacon      : port de découverte (0 : port libre, tests)
@@ -116,6 +118,8 @@ class PcLink(
 	private val fVersion     : String,
 	private val fNetworks    : () -> List<LocalNetwork>,
 	private val fOnMessage   : (PairedPhone, LinkMessage) -> Unit = { _, _ -> },
+	private val fOnChunk     : (PairedPhone, ByteArray) -> Unit   = { _, _ -> },
+	private val fOnClosed    : (PairedPhone) -> Unit              = {},
 	private val fNow         : () -> Long = System::currentTimeMillis,
 	private val fPort        : Int  = kLinkPort,
 	private val fBeacon      : Int  = kDiscoveryPort,
@@ -240,6 +244,25 @@ class PcLink(
 	): Boolean = fSessions[inId]?.send(inMessage) ?: false
 
 	/*
+		Envoie un morceau de fichier à un téléphone relié ; faux s'il ne l'est
+		pas.
+		inId    : téléphone
+		inChunk : morceau
+	*/
+	fun sendChunk(
+		inId    : String,
+		inChunk : ByteArray
+	): Boolean = fSessions[inId]?.sendChunk(inChunk) ?: false
+
+	/*
+		Envoie un message à tous les téléphones reliés ; rend les noms de ceux
+		qui l'ont reçu.
+		inMessage : message
+	*/
+	fun sendAll(inMessage: LinkMessage): List<String> =
+		fSessions.entries.toList().filter { it.value.send(inMessage) }.mapNotNull { vEntry -> fPeers.phones.firstOrNull { it.id == vEntry.key }?.label }
+
+	/*
 		Arrête l'écoute et ferme les sessions (fermeture de l'appli).
 	*/
 	@Synchronized
@@ -337,8 +360,14 @@ class PcLink(
 				if (inMessage !is LinkMessage.Pong) fOnMessage(vPhone, inMessage)
 			}
 
+			override fun onChunk(inSession: LinkSession, inChunk: ByteArray)
+			{
+				fPeers.phones.firstOrNull { it.id == inCall.peer.id }?.let { fOnChunk(it, inChunk) }
+			}
+
 			override fun onClosed(inSession: LinkSession, inReason: String)
 			{
+				fPeers.phones.firstOrNull { it.id == inCall.peer.id }?.let { runCatching { fOnClosed(it) } }
 				fSessions.remove(inCall.peer.id, inSession)
 				fState.update { it.copy(connected = fSessions.keys.toSet()) }
 				synchronized(this@PcLink) { if (fPeers.phones.any { it.id == inCall.peer.id }) update(inCall.peer.id) { it.copy(lastSeen = fNow()) } }
