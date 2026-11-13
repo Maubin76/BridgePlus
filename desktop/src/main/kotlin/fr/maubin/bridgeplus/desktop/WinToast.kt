@@ -6,31 +6,12 @@ import java.io.BufferedWriter
 import java.io.File
 import java.net.URLEncoder
 import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
 
 const val kAppId             = "BridgePlus.BridgePlus"									// identifiant de l'appli pour les notifications de Windows
 const val kLinkArg           = "--lien"													// argument d'un lien bridgeplus: (bouton d'une notification)
 private const val kAppIdKey  = "Software\\Classes\\AppUserModelId\\$kAppId"				// inscription de l'identifiant
 private const val kSchemeKey = "Software\\Classes\\bridgeplus"							// inscription du protocole bridgeplus:
-
-/*
-	Script PowerShell gardé ouvert : chaque ligne reçue est une notification
-	(XML en base64), affichée sous le nom et le logo de BridgePlus. Garder
-	le processus évite de relancer PowerShell (une demi-seconde) à chaque
-	notification.
-*/
-private val kToastScript = """
-${'$'}ErrorActionPreference = 'SilentlyContinue'
-[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
-[void][Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime]
-${'$'}n = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('$kAppId')
-while ((${'$'}l = [Console]::In.ReadLine()) -ne ${'$'}null) {
-	try {
-		${'$'}x = New-Object Windows.Data.Xml.Dom.XmlDocument
-		${'$'}x.LoadXml([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(${'$'}l)))
-		${'$'}n.Show([Windows.UI.Notifications.ToastNotification]::new(${'$'}x))
-	} catch {}
-}
-"""
 
 /*
 	Bouton d'une notification.
@@ -45,19 +26,29 @@ data class ToastAction(
 /*
 	Notifications natives de Windows : elles portent le nom et le logo de
 	BridgePlus (identifiant d'appli inscrit dans le registre de
-	l'utilisateur), respectent « Ne pas déranger », et leurs boutons lancent
-	un lien « bridgeplus:… » qui ne porte qu'un identifiant tiré au hasard
-	(jamais un chemin) : l'appli ouverte vérifie l'identifiant avant d'agir,
-	si bien qu'une page web ne peut rien ouvrir par ce lien. Les boutons
-	n'existent que pour l'appli installée (chemin de BridgePlus.exe connu).
-	Hors Windows ou en cas d'échec, show rend faux : l'appelant se rabat sur
-	la notification de la zone de notification.
+	l'utilisateur) et respectent « Ne pas déranger ». Un hôte PowerShell
+	gardé ouvert (ressource toast-host.ps1) les affiche, les retire et
+	signale celles que l'utilisateur ferme (notifications suivies, par une
+	étiquette ; un battement chaque seconde lui fait relire l'historique). Les boutons lancent un lien « bridgeplus:… » qui ne porte
+	qu'un identifiant tiré au hasard (jamais un chemin) : l'appli ouverte
+	vérifie l'identifiant avant d'agir, si bien qu'une page web ne peut rien
+	ouvrir par ce lien. Les boutons n'existent que pour l'appli installée
+	(chemin de BridgePlus.exe connu). Hors Windows ou en cas d'échec, show
+	rend faux : l'appelant se rabat sur la notification de la zone de
+	notification.
 */
 object WinToast
 {
-	private var fProcess : Process? = null													// PowerShell gardé ouvert
-	private var fInput   : BufferedWriter? = null											// lignes vers PowerShell
+	private var fProcess : Process? = null													// hôte PowerShell gardé ouvert
+	private var fInput   : BufferedWriter? = null											// lignes vers l'hôte
 	private var fReady   = false																// inscriptions faites
+	private val fTracked = ConcurrentHashMap.newKeySet<String>()							// notifications suivies (étiquettes)
+	private var fBeat    : Thread? = null														// battement vers l'hôte
+
+	/*
+		Notification suivie fermée sur le PC (étiquette) ; appelé sur un fil à part.
+	*/
+	@Volatile var onDismissed: (String) -> Unit = {}
 
 	/*
 		Vrai si les boutons des notifications peuvent agir (protocole inscrit).
@@ -89,33 +80,49 @@ object WinToast
 
 	/*
 		Affiche une notification ; faux si elle n'a pas pu partir.
-		inTitle   : titre
-		inBody    : texte
-		inLaunch  : lien du clic sur la notification ; null sans
-		inActions : boutons (deux au plus)
+		inTitle       : titre
+		inBody        : texte
+		inLaunch      : lien du clic sur la notification ; null sans
+		inActions     : boutons (deux au plus)
+		inTag         : étiquette de suivi (retrait, fermeture signalée) ; null sans
+		inImage       : icône affichée à gauche (PNG) ; null pour le logo de BridgePlus
+		inAttribution : petite ligne d'origine (« WhatsApp · Pixel ») ; null sans
 	*/
 	@Synchronized
 	fun show(
-		inTitle   : String,
-		inBody    : String,
-		inLaunch  : String?           = null,
-		inActions : List<ToastAction> = emptyList()
+		inTitle       : String,
+		inBody        : String,
+		inLaunch      : String?           = null,
+		inActions     : List<ToastAction> = emptyList(),
+		inTag         : String?           = null,
+		inImage       : File?             = null,
+		inAttribution : String?           = null
 	): Boolean
 	{
 		if (!fReady) return false
-		val vLinks   = actionable																// boutons utilisables
+		val vLinks   = actionable																	// boutons utilisables
 		val vLaunch  = if (vLinks && inLaunch != null) " activationType=\"protocol\" launch=\"${xml(inLaunch)}\"" else ""	// clic sur la notification
+		val vImage   = inImage?.takeIf { it.isFile }?.let { "<image placement=\"appLogoOverride\" src=\"${xml(it.toURI().toString())}\"/>" }.orEmpty()	// icône
+		val vOrigin  = inAttribution?.let { "<text placement=\"attribution\">${xml(it)}</text>" }.orEmpty()	// origine
 		val vActions = if (vLinks && inActions.isNotEmpty())
 			"<actions>" + inActions.take(2).joinToString("") { "<action content=\"${xml(it.label)}\" activationType=\"protocol\" arguments=\"${xml(it.link)}\"/>" } + "</actions>"
-			else ""																				// boutons
-		val vXml     = "<toast$vLaunch><visual><binding template=\"ToastGeneric\"><text>${xml(inTitle)}</text><text>${xml(inBody)}</text></binding></visual>$vActions</toast>"	// notification
-		return runCatching {
-			val vInput = input() ?: return false													// lignes vers PowerShell
-			vInput.write(Base64.getEncoder().encodeToString(vXml.toByteArray(Charsets.UTF_8)))
-			vInput.newLine()
-			vInput.flush()
-			true
-		}.getOrElse { fProcess = null; fInput = null; false }
+			else ""																					// boutons
+		val vXml     = "<toast$vLaunch><visual><binding template=\"ToastGeneric\">$vImage<text>${xml(inTitle)}</text><text>${xml(inBody)}</text>$vOrigin</binding></visual>$vActions</toast>"	// notification
+		val vSent    = send("S|${inTag.orEmpty()}|${Base64.getEncoder().encodeToString(vXml.toByteArray(Charsets.UTF_8))}")	// notification partie
+		if (vSent && inTag != null) { fTracked += inTag; beat() }
+		return vSent
+	}
+
+	/*
+		Retire une notification suivie (de l'écran et du centre de
+		notifications).
+		inTag : étiquette
+	*/
+	@Synchronized
+	fun remove(inTag: String): Boolean
+	{
+		fTracked -= inTag
+		return fReady && send("R|$inTag")
 	}
 
 	/*
@@ -129,7 +136,7 @@ object WinToast
 	): String = "bridgeplus:$inAction?id=${URLEncoder.encode(inId, Charsets.UTF_8)}"
 
 	/*
-		Arrête PowerShell (fermeture de l'appli).
+		Arrête l'hôte (fermeture de l'appli).
 	*/
 	@Synchronized
 	fun stop()
@@ -138,22 +145,71 @@ object WinToast
 		fProcess?.destroy()
 		fProcess = null
 		fInput   = null
+		fTracked.clear()
 	}
 
 	/*
-		Flux vers PowerShell, lancé à la première notification (ou relancé
-		s'il s'est arrêté) ; null s'il ne peut pas démarrer.
+		Battement : une ligne « P » chaque seconde tant qu'une notification est
+		suivie, pour que l'hôte relise l'historique (sa lecture de l'entrée
+		bloque entre deux lignes). Le fil s'arrête quand plus rien n'est suivi.
+	*/
+	@Synchronized
+	private fun beat()
+	{
+		if (fBeat?.isAlive == true) return
+		fBeat = Thread({
+			while (fTracked.isNotEmpty())
+			{
+				Thread.sleep(1_000)
+				synchronized(this) { send("P") }
+			}
+		}, "BridgePlus-battement-notifications").apply { isDaemon = true; start() }
+	}
+
+	/*
+		Envoie une ligne à l'hôte ; faux en cas d'échec (il sera relancé à la
+		prochaine).
+		inLine : ligne
+	*/
+	private fun send(inLine: String): Boolean =
+		runCatching {
+			val vInput = input() ?: return false															// lignes vers l'hôte
+			vInput.write(inLine)
+			vInput.newLine()
+			vInput.flush()
+			true
+		}.getOrElse { fProcess = null; fInput = null; false }
+
+	/*
+		Flux vers l'hôte, lancé à la première notification (ou relancé s'il
+		s'est arrêté), avec un fil qui lit les fermetures signalées ; null
+		s'il ne peut pas démarrer.
 	*/
 	private fun input(): BufferedWriter?
 	{
 		if (fProcess?.isAlive == true) return fInput
-		val vProcess = ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", kToastScript)
-			.redirectErrorStream(true)
-			.redirectOutput(ProcessBuilder.Redirect.DISCARD)
-			.start()																			// PowerShell
+		val vScript  = File(dataDir(), "toast-host.ps1")											// script de l'hôte
+		val vText    = WinToast::class.java.getResourceAsStream("toast-host.ps1")?.use { it.readBytes().toString(Charsets.UTF_8) }?.replace("{APPID}", kAppId) ?: return null	// contenu
+		vScript.parentFile.mkdirs()
+		vScript.writeText(vText, Charsets.UTF_8)
+		val vProcess = ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", vScript.absolutePath)
+			.redirectError(ProcessBuilder.Redirect.DISCARD)
+			.start()																				// hôte
+		val vInput   = vProcess.outputStream.bufferedWriter(Charsets.UTF_8)						// lignes vers l'hôte
 		fProcess = vProcess
-		fInput   = vProcess.outputStream.bufferedWriter(Charsets.US_ASCII)
-		return fInput
+		fInput   = vInput
+		Thread({
+			runCatching {
+				vProcess.inputStream.bufferedReader(Charsets.US_ASCII).forEachLine { vLine ->
+					if (vLine.startsWith("D|"))
+					{
+						fTracked -= vLine.substring(2)
+						runCatching { onDismissed(vLine.substring(2)) }
+					}
+				}
+			}
+		}, "BridgePlus-notifications").apply { isDaemon = true }.start()
+		return vInput
 	}
 
 	/*

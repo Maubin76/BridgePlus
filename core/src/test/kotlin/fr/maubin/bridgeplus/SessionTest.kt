@@ -20,6 +20,8 @@ import fr.maubin.bridgeplus.link.Wire
 import fr.maubin.bridgeplus.link.newLinkKey
 import fr.maubin.bridgeplus.link.readWire
 import fr.maubin.bridgeplus.link.writeData
+import fr.maubin.bridgeplus.notice.NoticeCandidate
+import fr.maubin.bridgeplus.notice.NoticeOutbox
 import fr.maubin.bridgeplus.peers.PairedPc
 import fr.maubin.bridgeplus.peers.PairedPhone
 import fr.maubin.bridgeplus.peers.PcLink
@@ -325,6 +327,38 @@ class SessionTest
 		assertTrue(vEnds.joinToString { "${it.name} ${it.state} ${it.reason}" }, vEnds.all { it.state == TransferState.Done })
 		assertArrayEquals(vFromPhone.readBytes(), vPcInbox.resolve("video.mp4").readBytes())
 		assertArrayEquals(vFromPc.readBytes(), vPhoneInbox.resolve("archive.zip").readBytes())
+	}
+
+	/*
+		Notifications, à travers de vraies sessions : une notification de
+		messagerie arrive au PC avec l'icône de l'appli (une fois), son
+		retrait suit ; un code de connexion ne part pas ; la fermeture sur le
+		PC revient au téléphone.
+	*/
+	@Test
+	fun noticesBothWays()
+	{
+		val vOnPc    = LinkedBlockingQueue<LinkMessage>()											// reçu par le PC
+		val vOnPhone = LinkedBlockingQueue<LinkMessage>()											// reçu par le téléphone
+		val vPc      = pcLink("pc.json", freePort(), inOnMessage = { _, vMessage -> vOnPc.add(vMessage) })	// liaison du PC
+		val vPhone   = phoneLink("tel.json", inOnMessage = { _, vMessage -> vOnPhone.add(vMessage) })			// liaison du téléphone
+		val vOutbox  = NoticeOutbox(vPhone::sendAll, { BridgeSettings() }, { byteArrayOf(1, 2, 3) })	// envoi des notifications
+		vPc.startPairing()
+		val vOffer   = vPc.state.value.offer!!														// offre
+		assertNull(vPhone.pair(vOffer, kWifi))
+		vPhone.start()
+		awaitTrue { vPhone.state.value.statusOf(vOffer.pcId) == PcStatus.Connected && vPc.state.value.connected.isNotEmpty() }
+
+		assertTrue(vOutbox.posted(NoticeCandidate("k1", "com.whatsapp", "WhatsApp", "Marie", "On se voit à 19 h ?", 0)))
+		assertFalse(vOutbox.posted(NoticeCandidate("k2", "com.whatsapp", "WhatsApp", "Banque", "Votre code de connexion : 552311", 0)))
+		assertTrue(vOnPc.poll(5, TimeUnit.SECONDS) is LinkMessage.AppIcon)
+		assertEquals("On se voit à 19 h ?", (vOnPc.poll(5, TimeUnit.SECONDS) as LinkMessage.PhoneNotice).text)
+		vOutbox.removed("k1")
+		assertEquals(LinkMessage.NoticeRemoved("k1"), vOnPc.poll(5, TimeUnit.SECONDS))
+		assertNull(vOnPc.poll(500, TimeUnit.MILLISECONDS))
+
+		vPc.send(vPhone.info().id, LinkMessage.NoticeDismiss("k1"))
+		assertEquals(LinkMessage.NoticeDismiss("k1"), vOnPhone.poll(5, TimeUnit.SECONDS))
 	}
 
 	/*

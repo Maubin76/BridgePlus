@@ -11,6 +11,7 @@ import fr.maubin.bridgeplus.clip.clipMessage
 import fr.maubin.bridgeplus.history.ClipHistory
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.discoverPcs
+import fr.maubin.bridgeplus.notice.NoticeOutbox
 import fr.maubin.bridgeplus.peers.PairedPc
 import fr.maubin.bridgeplus.peers.PhoneLink
 import fr.maubin.bridgeplus.settings.BridgeSettings
@@ -24,6 +25,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -61,7 +64,14 @@ class BridgeApp : Application()
 			fName      = phoneName(this),
 			fVersion   = BuildConfig.VERSION_NAME,
 			fDiscover  = { discoverPcs() },
-			fOnMessage = { vPc, vMessage -> if (vMessage is LinkMessage.Clip) received(vPc.label, vMessage) else files.onMessage(vPc.id, vPc.label, vMessage) },
+			fOnMessage = { vPc, vMessage ->
+				when (vMessage)
+				{
+					is LinkMessage.Clip          -> received(vPc.label, vMessage)
+					is LinkMessage.NoticeDismiss -> NoticeListener.dismiss(vMessage.key)
+					else                         -> files.onMessage(vPc.id, vPc.label, vMessage)
+				}
+			},
 			fOnChunk   = { vPc, vChunk -> files.onChunk(vPc.id, vChunk) },
 			fOnClosed  = { vPc -> files.onDisconnected(vPc.id) }
 		)
@@ -77,6 +87,12 @@ class BridgeApp : Application()
 		dans le presse-papiers (ou proposés par une notification).
 	*/
 	val clips: ClipRelay by lazy { ClipRelay({ link.sendAll(it) }, { writeClipboard(this, it) }, { fSettings.value }, { vText, vOut, vPeers -> history.add(vText, vOut, vPeers) }) }
+
+	/*
+		Envoi des notifications du téléphone aux PC reliés (filtre : liste
+		blanche, exclusions d'office, codes à usage unique).
+	*/
+	val notices: NoticeOutbox by lazy { NoticeOutbox({ link.sendAll(it) }, { fSettings.value }, { appIconPng(this, it) }, packageName) }
 
 	/*
 		Historique chiffré des échanges (clé du Keystore).
@@ -110,6 +126,7 @@ class BridgeApp : Application()
 			)
 		}
 		NetworkWatch.register(this)
+		fScope.launch { link.state.map { it.connected.map { vPc -> vPc.id }.toSet() }.distinctUntilChanged().collect { notices.newSession() } }
 		val vLocks = TransferWakeLocks(this)															// verrous d'éveil
 		fScope.launch {
 			files.transfers.collect { vAll ->

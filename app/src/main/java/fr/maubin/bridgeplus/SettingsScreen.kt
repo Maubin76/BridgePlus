@@ -30,20 +30,22 @@ import kotlinx.coroutines.launch
 
 /*
 	Écran Réglages, écran de travail à la manière de KeePlus : presse-papiers
-	(chaque sens), réseaux de la maison (appris à l'appairage, retirables),
-	autorisations, à propos. Les réglages des étapes suivantes
-	(notifications, dossier de réception) viendront ici.
+	(chaque sens), notifications sur le PC (liste blanche), fichiers reçus,
+	réseaux de la maison (appris à l'appairage, retirables),
+	autorisations, à propos.
 	inState   : état de la liaison
 	inNetwork : réseau du téléphone
 	inResumes : retours à l'écran (relecture des autorisations)
 	inOnBack  : retour à l'accueil
+	inOnApps  : ouverture de la liste blanche des notifications
 */
 @Composable
 fun SettingsScreen(
 	inState   : PhoneLinkState,
 	inNetwork : PhoneNetwork,
 	inResumes : Int,
-	inOnBack  : () -> Unit
+	inOnBack  : () -> Unit,
+	inOnApps  : () -> Unit
 )
 {
 	val vContext = LocalContext.current																// contexte
@@ -59,6 +61,14 @@ fun SettingsScreen(
 			OnOffSetting("Du téléphone vers le PC", "Quand BridgePlus est ouvert, chaque copie part vers le PC. Ailleurs, Android l'interdit : utilisez la tuile ou le menu de partage « Envoyer au PC ». Les contenus marqués sensibles ne partent jamais.", vSettings.clipSend) { vOn ->
 				vContext.bridgeApp.updateSettings { it.copy(clipSend = vOn) }
 			}
+		}
+		SettingsSection("Notifications sur le PC") {
+			OnOffSetting("Envoyer les notifications au PC", "Les applis choisies (les messageries par défaut) s'affichent sur le PC. Jamais les banques, les gestionnaires de mots de passe ni les codes de connexion. Rien n'est enregistré.", vSettings.noticesSend) { vOn ->
+				vContext.bridgeApp.updateSettings { it.copy(noticesSend = vOn) }
+			}
+			SettingsDivider()
+			BasicText(if (NoticeListener.granted(vContext)) "Accès aux notifications : accordé" else "Accès aux notifications : à accorder (voir Autorisations ci-dessous)", style = vType.bodySmall)
+			TextLink("Choisir les applis", inOnApps)
 		}
 		SettingsSection("Fichiers reçus") {
 			BasicText("Les fichiers envoyés par le PC arrivent dans Téléchargements › $kReceiveFolder ; les photos et vidéos apparaissent aussi dans la galerie.", style = vType.bodySmall)

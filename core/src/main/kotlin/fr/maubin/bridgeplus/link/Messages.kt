@@ -125,6 +125,55 @@ sealed interface LinkMessage
 		val id     : String,
 		val reason : String = ""
 	) : LinkMessage
+
+	/*
+		Notification du téléphone, à afficher sur le PC. Jamais enregistrée.
+		key   : clé de la notification sur le téléphone
+		pkg   : paquet de l'appli
+		app   : nom de l'appli
+		title : titre (souvent l'expéditeur)
+		text  : texte
+		at    : date de publication (ms)
+	*/
+	@Serializable
+	@SerialName("notification")
+	data class PhoneNotice(
+		val key   : String,
+		val pkg   : String,
+		val app   : String,
+		val title : String,
+		val text  : String,
+		val at    : Long
+	) : LinkMessage
+
+	/*
+		Notification retirée sur le téléphone : le PC la retire aussi.
+		key : clé de la notification
+	*/
+	@Serializable
+	@SerialName("notification-retiree")
+	data class NoticeRemoved(val key: String) : LinkMessage
+
+	/*
+		Notification fermée sur le PC : le téléphone la masque aussi.
+		key : clé de la notification
+	*/
+	@Serializable
+	@SerialName("notification-masquee")
+	data class NoticeDismiss(val key: String) : LinkMessage
+
+	/*
+		Icône d'une appli du téléphone (PNG de 64 px), envoyée une fois par
+		session et gardée par le PC.
+		pkg : paquet de l'appli
+		png : image (base64)
+	*/
+	@Serializable
+	@SerialName("icone")
+	data class AppIcon(
+		val pkg : String,
+		val png : String
+	) : LinkMessage
 }
 
 /*
