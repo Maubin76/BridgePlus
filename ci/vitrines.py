@@ -238,3 +238,53 @@ three_phones(['telephone-accueil', 'telephone-historique', 'telephone-notificati
 
 # 6. Assistant de premier lancement.
 three_phones(['telephone-assistant-1', 'telephone-assistant-2', 'telephone-assistant-3'], 'telephone-assistant.png')
+
+
+def taskbar(inIcons, inLight):
+	"""Coin droit d'une barre des tâches de Windows 11 à 200 % : chevron des icônes
+	masquées, icônes de la zone de notification (32 px, rendus de l'appli), langue,
+	Wi-Fi, heure et date."""
+	vW, vH = 1000, 96
+	vBg    = (243, 243, 243) if inLight else (32, 32, 32)
+	vInk   = (24, 24, 24) if inLight else (245, 245, 245)
+	vImg   = Image.new('RGBA', (vW, vH), vBg + (255,))
+	vDraw  = ImageDraw.Draw(vImg)
+	vDraw.line((0, 0, vW, 0), fill=(222, 222, 222) if inLight else (52, 52, 52), width=2)
+	vSmall = font(24)
+	vDraw.text((vW - 28, 30), '14:32', font=vSmall, fill=vInk, anchor='rm')
+	vDraw.text((vW - 28, 64), '16/11/2026', font=vSmall, fill=vInk, anchor='rm')
+	vX     = vW - 220
+	vCy    = vH // 2 + 8
+	for vR in (22, 14, 6):
+		vDraw.arc((vX - vR, vCy - vR, vX + vR, vCy + vR), 225, 315, fill=vInk, width=3)
+	vDraw.text((vX - 60, vH // 2), 'FRA', font=vSmall, fill=vInk, anchor='rm')
+	vX     = vX - 150
+	for vIcon in reversed(inIcons):
+		vX -= 64
+		vImg.paste(vIcon, (vX + 16, (vH - 32) // 2), vIcon)
+	vX    -= 48
+	vDraw.line((vX + 10, vH // 2 + 6, vX + 20, vH // 2 - 4), fill=vInk, width=3)
+	vDraw.line((vX + 20, vH // 2 - 4, vX + 30, vH // 2 + 6), fill=vInk, width=3)
+	return vImg
+
+
+# 7. Batterie du téléphone dans la barre des tâches : barre sombre et barre claire,
+#    puis les états de l'icône, agrandis.
+vCanvas = background(3200, 1700)
+vLogo   = raw('icone-bridgeplus-32').convert('RGBA')
+for vIndex, (vState, vLight) in enumerate((('78', False), ('15-charge', True))):
+	vIcon  = raw('batterie-%s-%s-32' % (vState, 'claire' if vLight else 'sombre')).convert('RGBA')
+	vStrip = taskbar([vLogo, vIcon], vLight).resize((2500, 240), Image.LANCZOS)
+	place(vCanvas, window(vStrip, 2500, 16), 350, 130 + vIndex * 380, 16, 40)
+vDraw   = ImageDraw.Draw(vCanvas)
+vLabels = (('78', '78 %'), ('15-charge', '15 %, en charge'), ('12', 'Sous 20 %'), ('100', '100 %'), ('aucun', 'Pas de téléphone relié'))
+for vIndex, (vState, vLabel) in enumerate(vLabels):
+	vX    = 300 + vIndex * 560
+	vTile = Image.new('RGBA', (360, 360), (32, 32, 32, 255))
+	vIcon = raw('batterie-%s-sombre-128' % vState).convert('RGBA').resize((256, 256), Image.LANCZOS)
+	vTile.paste(vIcon, (52, 52), vIcon)
+	vRound = Image.new('RGBA', vTile.size, (0, 0, 0, 0))
+	vRound.paste(vTile, (0, 0), rounded_mask(vTile.size, 48))
+	place(vCanvas, vRound, vX, 1050, 48, 40)
+	vDraw.text((vX + 180, 1500), vLabel, font=font(44), fill=(28, 28, 30), anchor='mm')
+save(vCanvas, 'pc-batterie.png')

@@ -1,5 +1,6 @@
 package fr.maubin.bridgeplus.desktop
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -252,6 +255,34 @@ class ReadmeScreenshotsTest
 	}
 
 	/*
+		Icônes de la zone de notification, sur fond transparent : celle de
+		BridgePlus et celle de la batterie (plusieurs états, barre sombre et
+		claire), en 32 px (barre des tâches à 200 %) et en 128 px (agrandi).
+	*/
+	@Test
+	fun renderTrayIcons()
+	{
+		val vStates = listOf(
+			"78" to LinkMessage.Battery(78, false),
+			"15-charge" to LinkMessage.Battery(15, true),
+			"12" to LinkMessage.Battery(12, false),
+			"100" to LinkMessage.Battery(100, false),
+			"aucun" to null
+		)																							// états : nom, batterie
+		for (vSide in listOf(32, 128))
+		{
+			renderIcon("icone-bridgeplus-$vSide", vSide, BitmapPainter(trayImage(LinkLook.Connected, vSide)))
+			for ((vName, vBattery) in vStates)
+			{
+				for (vLight in listOf(false, true))
+				{
+					renderIcon("batterie-$vName-${if (vLight) "claire" else "sombre"}-$vSide", vSide, BatteryPainter(vBattery, vLight))
+				}
+			}
+		}
+	}
+
+	/*
 		Trois étapes de l'assistant de premier lancement (textes repris de
 		l'appli Android).
 	*/
@@ -297,6 +328,20 @@ class ReadmeScreenshotsTest
 	) = run {
 		fClock = fNow - inMinutesAgo * kMinute
 		fHistory.add(inText, inOutgoing, listOf("Pixel 9"))
+	}
+
+	/*
+		Rendu d'une icône, à sa taille en pixels.
+		inName    : nom du fichier, sans extension
+		inSide    : côté (px)
+		inPainter : icône
+	*/
+	private fun renderIcon(
+		inName    : String,
+		inSide    : Int,
+		inPainter : Painter
+	) = render(inName, inSide, inSide, 1f) {
+		Canvas(Modifier.fillMaxSize()) { with(inPainter) { draw(size) } }
 	}
 
 	/*
