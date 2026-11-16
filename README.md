@@ -118,6 +118,17 @@ Copiez sur le PC, collez sur le téléphone, et inversement.
 | **Zone de notification** | L'appli reste près de l'horloge ; démarrage avec Windows au choix | — | ✅ |
 | **Mises à jour** | Nouvelle version proposée et installée par l'appli | ✅ | ✅ |
 
+## La batterie du téléphone, d'un coup d'œil
+
+<p align="center">
+  <img src="doc/images/pc-batterie.png" alt="L'icône de la batterie du téléphone près de l'horloge, sur une barre des tâches sombre et claire, et ses états : normal, en charge, sous 20 %, pleine, sans téléphone relié" width="100%">
+</p>
+
+Une icône près de l'horloge montre la batterie du téléphone relié : le pourcentage en grand et
+une jauge, **verts en charge, rouges sous 20 %**. L'info-bulle donne le nom du téléphone. Sans
+téléphone relié, un tiret grisé. Windows 11 la range d'abord dans les icônes masquées (^) :
+glissez-la une fois dans la barre. Réglage « Batterie dans la barre des tâches ».
+
 ## Un premier lancement guidé
 
 <p align="center">
