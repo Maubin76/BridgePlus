@@ -146,8 +146,8 @@ class DesktopTest
 						with(vPaint) { draw(size) }
 					}
 					val vPixels = vImage.toPixelMap()																// pixels
-					val vInked  = (0 until vSide).sumOf { vX -> (0 until vSide).count { vY -> vPixels[vX, vY].alpha > 0.5f } }	// pixels dessinés
-					assertTrue("$vSide px, $vBattery, claire : $vLight", vInked in vSide..vSide * vSide / 2)
+					val vInked  = (0 until vSide).sumOf { vX -> (0 until vSide).count { vY -> vPixels[vX, vY].alpha > 0.1f } }	// pixels dessinés (le tiret et la piste sont grisés)
+					assertTrue("$vSide px, $vBattery, claire : $vLight", vInked in vSide..vSide * vSide * 3 / 4)
 				}
 			}
 		}
