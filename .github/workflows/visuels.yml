@@ -4,7 +4,8 @@
 # à recopier dans doc/images, est joint à l'exécution (« visuels »).
 #
 # Sur Windows, pour la police des barres de titre (Segoe UI). Lancé quand le
-# rendu ou le script changent sur develop, ou à la main depuis l'onglet Actions.
+# rendu, le script ou l'interface changent sur develop, ou à la main depuis
+# l'onglet Actions.
 name: Visuels du README
 
 on:
@@ -12,6 +13,8 @@ on:
     branches: [develop]
     paths:
       - desktop/src/test/kotlin/fr/maubin/bridgeplus/desktop/ReadmeScreenshotsTest.kt
+      - desktop/src/main/**
+      - ui/src/**
       - ci/vitrines.py
       - .github/workflows/visuels.yml
   workflow_dispatch:
