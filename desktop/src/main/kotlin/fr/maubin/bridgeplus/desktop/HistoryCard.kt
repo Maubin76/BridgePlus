@@ -273,21 +273,22 @@ fun HistoryWindow(
 fun HistoryCardContent(
 	inApp      : DesktopApp,
 	inOnCopied : () -> Unit,
-	inOnClose  : () -> Unit
+	inOnClose  : () -> Unit,
+	inShown    : PcShown = rememberPcShown(inApp)
 )
 {
 	val vType     = bridgeType()																	// styles de texte
 	val vQuery    = rememberTextFieldState()														// recherche
 	val vFocus    = remember { FocusRequester() }													// focus de la recherche
-	val vItems    by inApp.history.items.collectAsState()											// éléments
+	val vItems    by inShown.history.items.collectAsState()											// éléments
 	var vText     by remember { mutableStateOf("") }												// recherche en cours
 	var vSelected by remember { mutableIntStateOf(0) }												// ligne choisie
 	val vNow      = remember { System.currentTimeMillis() }											// horloge (« il y a… »)
 	val vScope    = rememberCoroutineScope()														// lectures et écritures
 	val vList     = rememberLazyListState()															// défilement
-	val vFound    = remember(vItems, vText) { inApp.history.search(vText) }							// éléments affichés
-	val vBattery  by inApp.battery.collectAsState()													// batterie des téléphones
-	val vLink     by inApp.link.state.collectAsState()												// téléphones appairés
+	val vFound    = remember(vItems, vText) { inShown.history.search(vText) }							// éléments affichés
+	val vBattery  = inShown.battery																	// batterie des téléphones
+	val vLink     = inShown.link																	// téléphones appairés
 	LaunchedEffect(Unit) { runCatching { vFocus.requestFocus() } }
 	LaunchedEffect(vQuery) { snapshotFlow { vQuery.text.toString() }.collect { vText = it; vSelected = 0 } }
 	LaunchedEffect(vSelected) { if (vFound.isNotEmpty()) vList.animateScrollToItem(vSelected.coerceIn(0, vFound.lastIndex)) }
@@ -341,8 +342,8 @@ fun HistoryCardContent(
 						inPinned   = vItem.pinned,
 						inSelected = vIndex == vSelected,
 						inOnCopy   = { copy(vItem.id) },
-						inOnPin    = { vScope.launch(Dispatchers.IO) { inApp.history.pin(vItem.id, !vItem.pinned) } },
-						inOnDelete = { vScope.launch(Dispatchers.IO) { inApp.history.delete(vItem.id) } }
+						inOnPin    = { vScope.launch(Dispatchers.IO) { inShown.history.pin(vItem.id, !vItem.pinned) } },
+						inOnDelete = { vScope.launch(Dispatchers.IO) { inShown.history.delete(vItem.id) } }
 					)
 				}
 			}

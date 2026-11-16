@@ -44,16 +44,20 @@ import kotlinx.coroutines.delay
 	(batterie, renommer, oublier), faire sonner le téléphone, derniers
 	textes échangés, appairage d'un téléphone
 	par QR code.
-	inApp : appli PC
+	inApp   : appli PC
+	inShown : ce que montre la page
 */
 @Composable
-fun DevicesPanel(inApp: DesktopApp)
+fun DevicesPanel(
+	inApp   : DesktopApp,
+	inShown : PcShown
+)
 {
 	val vType     = bridgeType()																	// styles de texte
-	val vState    by inApp.link.state.collectAsState()											// état de la liaison
+	val vState    = inShown.link																	// état de la liaison
 	val vSettings by inApp.settings.collectAsState()											// réglages
-	val vClips    by inApp.history.items.collectAsState()										// historique
-	val vBattery  by inApp.battery.collectAsState()												// batterie des téléphones
+	val vClips    by inShown.history.items.collectAsState()										// historique
+	val vBattery  = inShown.battery																// batterie des téléphones
 	var vRing     by remember { mutableStateOf<String?>(null) }								// résultat de « Faire sonner »
 	var vRename   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à renommer
 	var vForget   by remember { mutableStateOf<PairedPhone?>(null) }							// téléphone à oublier

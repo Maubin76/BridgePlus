@@ -45,6 +45,10 @@ import androidx.compose.ui.window.rememberWindowState
 import fr.maubin.bridgeplus.desktop.update.DesktopUpdateInstaller
 import fr.maubin.bridgeplus.desktop.update.appFolder
 import fr.maubin.bridgeplus.desktop.update.cleanLeftover
+import fr.maubin.bridgeplus.history.ClipHistory
+import fr.maubin.bridgeplus.link.LinkMessage
+import fr.maubin.bridgeplus.peers.PcLinkState
+import fr.maubin.bridgeplus.transfer.Transfer
 import fr.maubin.bridgeplus.ui.components.LocalAnimationsEnabled
 import fr.maubin.bridgeplus.ui.icons.LineIcons
 import fr.maubin.bridgeplus.ui.screens.WorkScreen
@@ -192,17 +196,47 @@ fun main(inArgs: Array<String>)
 }
 
 /*
+	Ce que montrent les pages et la carte de l'historique du PC : lu dans
+	l'appli, ou fourni tel quel (rendus du README).
+	link      : état de la liaison
+	battery   : batterie de chaque téléphone
+	transfers : transferts en cours et récents
+	history   : historique du presse-papiers
+*/
+data class PcShown(
+	val link      : PcLinkState,
+	val battery   : Map<String, LinkMessage.Battery>,
+	val transfers : List<Transfer>,
+	val history   : ClipHistory
+)
+
+/*
+	Ce que montre l'appli, suivi en direct.
+	inApp : appli PC
+*/
+@Composable
+fun rememberPcShown(inApp: DesktopApp): PcShown
+{
+	val vLink      by inApp.link.state.collectAsState()										// état de la liaison
+	val vBattery   by inApp.battery.collectAsState()											// batterie des téléphones
+	val vTransfers by inApp.files.transfers.collectAsState()									// transferts
+	return PcShown(vLink, vBattery, vTransfers, inApp.history)
+}
+
+/*
 	Contenu de la fenêtre, à la manière de KeePlus sur PC : colonne de
 	navigation à gauche (marque, puis les pages), page de travail à droite
 	(voile de brume, grille fine).
 	inApp    : appli PC
 	inPage   : page affichée
+	inShown  : ce que montrent les pages
 	inOnPage : changement de page
 */
 @Composable
 fun PcWindow(
 	inApp    : DesktopApp,
 	inPage   : PcPage,
+	inShown  : PcShown = rememberPcShown(inApp),
 	inOnPage : (PcPage) -> Unit
 )
 {
@@ -216,8 +250,8 @@ fun PcWindow(
 			WorkScreen(inPage.label, null) {
 				when (inPage)
 				{
-					PcPage.Devices   -> DevicesPanel(inApp)
-					PcPage.Transfers -> TransfersPanel(inApp)
+					PcPage.Devices   -> DevicesPanel(inApp, inShown)
+					PcPage.Transfers -> TransfersPanel(inApp, inShown)
 					PcPage.Settings  -> SettingsPanel(inApp)
 				}
 			}

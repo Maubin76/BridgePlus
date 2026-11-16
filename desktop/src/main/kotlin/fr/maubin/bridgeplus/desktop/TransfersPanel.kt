@@ -45,13 +45,17 @@ import javax.swing.UIManager
 	sur la fenêtre et sur la carte), transferts en cours (avancement,
 	annuler) et récents (ouvrir, ouvrir le dossier), dossier de réception,
 	entrée du menu de l'Explorateur.
-	inApp : appli PC
+	inApp   : appli PC
+	inShown : ce que montre la page
 */
 @Composable
-fun TransfersPanel(inApp: DesktopApp)
+fun TransfersPanel(
+	inApp   : DesktopApp,
+	inShown : PcShown
+)
 {
 	val vType      = bridgeType()																// styles de texte
-	val vTransfers by inApp.files.transfers.collectAsState()									// transferts
+	val vTransfers = inShown.transfers															// transferts
 	val vSettings  by inApp.settings.collectAsState()											// réglages
 	val vScope     = rememberCoroutineScope()													// boîtes de dialogue, registre
 	var vNow       by remember { mutableLongStateOf(System.currentTimeMillis()) }			// horloge (« il y a… »)
