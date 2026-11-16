@@ -177,7 +177,7 @@ class ReadmeScreenshotsTest
 				GhostButton("Envoyer le presse-papiers", {})
 				GhostButton("Envoyer un fichier", {})
 				SettingsSection("Fichiers en cours") {
-					TransferRow(true, "IMG_20261114_183205.jpg", "Vers Bureau · 2,7 Mo sur 4,4 Mo", 0.62f, false) {
+					TransferRow(true, "IMG_20261114_183205.jpg", "Vers Bureau · 2,6 Mo sur 4,2 Mo", 0.62f, false) {
 						IconAction(LineIcons.Close, "Annuler", {})
 					}
 				}
@@ -205,7 +205,7 @@ class ReadmeScreenshotsTest
 					HistoryRow(true, "Code Wi-Fi des invités : sur la carte, à côté du frigo", "Bureau", "il y a 4 min", false, false, {}, {}, {})
 					HistoryRow(false, "https://www.sncf-connect.com/billet/7Q4K2M", "Bureau", "il y a 18 min", false, false, {}, {}, {})
 					HistoryRow(false, "Réunion déplacée à 14 h 30, salle Garonne", "Bureau", "il y a 52 min", false, false, {}, {}, {})
-					HistoryRow(true, "Facture électricité novembre.pdf · 412 ko", "Bureau", "il y a 3 h", false, false, {}, {}, {})
+					HistoryRow(true, "Facture électricité novembre.pdf · 402,3 Ko", "Bureau", "il y a 3 h", false, false, {}, {}, {})
 				}
 				TextLink("Tout effacer", {}, inDanger = true)
 			}
