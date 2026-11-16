@@ -121,8 +121,8 @@ class DesktopTest
 	}
 
 	/*
-		Icône de la batterie : info-bulle, couleur de la jauge (charge, sous
-		20 %), et dessin aux tailles de la barre des tâches, avec ou sans
+		Icône de la batterie : info-bulle, couleur des chiffres et de la jauge
+		(charge, sous 20 %), et dessin aux tailles de la barre des tâches, avec ou sans
 		téléphone relié, sur barre sombre ou claire.
 	*/
 	@Test
@@ -131,9 +131,9 @@ class DesktopTest
 		assertEquals("Pixel 9 · 78 %", batteryTooltip("Pixel 9", LinkMessage.Battery(78, false)))
 		assertEquals("Pixel 9 · 15 % · en charge", batteryTooltip("Pixel 9", LinkMessage.Battery(15, true)))
 		assertEquals("BridgePlus — aucun téléphone relié", batteryTooltip(null, null))
-		assertEquals(BridgeColors.success, batteryGaugeColor(LinkMessage.Battery(15, true), BridgeColors.text))
-		assertEquals(BridgeColors.danger, batteryGaugeColor(LinkMessage.Battery(19, false), BridgeColors.text))
-		assertEquals(BridgeColors.text, batteryGaugeColor(LinkMessage.Battery(20, false), BridgeColors.text))
+		assertEquals(BridgeColors.success, batteryColor(LinkMessage.Battery(15, true), BridgeColors.text))
+		assertEquals(BridgeColors.danger, batteryColor(LinkMessage.Battery(19, false), BridgeColors.text))
+		assertEquals(BridgeColors.text, batteryColor(LinkMessage.Battery(20, false), BridgeColors.text))
 		for (vSide in listOf(16, 32))
 		{
 			for (vBattery in listOf(null, LinkMessage.Battery(5, false), LinkMessage.Battery(78, true), LinkMessage.Battery(100, false)))

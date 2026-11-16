@@ -51,12 +51,12 @@ fun batteryTooltip(
 }
 
 /*
-	Couleur de la jauge : verte en charge, rouge sous 20 %, sinon celle du
-	texte.
+	Couleur de l'icône (chiffres et jauge) : verte en charge, rouge sous
+	20 %, sinon celle du texte.
 	inBattery : batterie
 	inInk     : couleur du texte
 */
-fun batteryGaugeColor(
+fun batteryColor(
 	inBattery : LinkMessage.Battery,
 	inInk     : Color
 ): Color = when
@@ -67,9 +67,10 @@ fun batteryGaugeColor(
 }
 
 /*
-	Icône de la batterie : le pourcentage en grand, une jauge dessous ;
-	dessinée à la taille demandée par Windows, pour rester nette. Sans
-	téléphone relié : un tiret grisé et une jauge vide.
+	Icône de la batterie : le pourcentage sur presque toute la hauteur, une
+	jauge fine dessous, chiffres et jauge verts en charge et rouges sous
+	20 % ; dessinée à la taille demandée par Windows, pour rester nette.
+	Sans téléphone relié : un tiret grisé et une jauge vide.
 	fBattery : batterie ; null sans téléphone relié
 	fLight   : barre des tâches claire (texte sombre)
 */
@@ -87,21 +88,25 @@ class BatteryPainter(
 	{
 		val vSide   = size.minDimension																// côté
 		val vBase   = if (fLight) BridgeColors.ground else BridgeColors.text						// couleur du texte
-		val vInk    = if (fBattery == null) vBase.copy(alpha = 0.45f) else vBase					// texte, grisé sans téléphone
+		val vInk    = fBattery?.let { batteryColor(it, vBase) } ?: vBase.copy(alpha = 0.45f)		// chiffres, tiret grisé sans téléphone
 		val vText   = fBattery?.level?.coerceIn(0, 100)?.toString() ?: kNone						// pourcentage
-		val vSize   = vSide * if (vText.length > 2) 0.5f else 0.66f								// taille des chiffres
-		val vFont   = Font(kDigits, vSize)															// police
+		val vHeight = (vSide * 0.12f).coerceAtLeast(2f)												// épaisseur de la jauge
+		val vTop    = vSide - vHeight																// haut de la jauge, collée en bas
+		val vArea   = vTop - vSide * 0.08f															// hauteur réservée aux chiffres
 		val vPaint  = Paint().apply { color = vInk.toArgb(); isAntiAlias = true }					// encre
+		val vProbe  = Font(kDigits, vSide)															// police à la taille du côté (mesure)
+		val vCap    = vProbe.metrics.capHeight.takeIf { it > 0f } ?: (vSide * 0.7f)				// hauteur des chiffres à cette taille
+		val vRoom   = if (fBattery == null) vSide * 0.5f else vSide								// largeur permise (tiret : la moitié)
+		val vScale  = minOf(vArea / vCap, vRoom / vProbe.measureTextWidth(vText, vPaint))		// agrandissement : hauteur ou largeur
+		val vFont   = Font(kDigits, vSide * vScale)												// police
 		val vWidth  = vFont.measureTextWidth(vText, vPaint)										// largeur du texte
-		drawIntoCanvas { it.skiaCanvas.drawString(vText, (size.width - vWidth) / 2f, vSide * 0.37f + vSize * 0.36f, vFont, vPaint) }
+		drawIntoCanvas { it.skiaCanvas.drawString(vText, (size.width - vWidth) / 2f, (vArea + vCap * vScale) / 2f, vFont, vPaint) }
 		val vLeft   = vSide * 0.06f																	// gauche de la jauge
-		val vTop    = vSide * 0.78f																	// haut de la jauge
 		val vLength = vSide * 0.88f																	// longueur de la jauge
-		val vHeight = vSide * 0.16f																	// épaisseur de la jauge
 		drawRoundRect(vBase.copy(alpha = 0.3f), Offset(vLeft, vTop), Size(vLength, vHeight), CornerRadius(vHeight / 2f))
 		fBattery?.let { vBattery ->
 			val vFill = (vLength * vBattery.level.coerceIn(0, 100) / 100f).coerceAtLeast(vHeight)	// partie pleine
-			drawRoundRect(batteryGaugeColor(vBattery, vBase), Offset(vLeft, vTop), Size(vFill, vHeight), CornerRadius(vHeight / 2f))
+			drawRoundRect(vInk, Offset(vLeft, vTop), Size(vFill, vHeight), CornerRadius(vHeight / 2f))
 		}
 	}
 }
