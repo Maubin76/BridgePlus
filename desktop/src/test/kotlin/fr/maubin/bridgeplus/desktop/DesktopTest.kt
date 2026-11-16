@@ -1,6 +1,15 @@
 package fr.maubin.bridgeplus.desktop
 
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.NetworkId
+import fr.maubin.bridgeplus.ui.theme.BridgeColors
 import fr.maubin.bridgeplus.peers.PairedPhone
 import fr.maubin.bridgeplus.peers.PcLinkState
 import fr.maubin.bridgeplus.ui.components.LinkLook
@@ -12,7 +21,8 @@ import org.junit.Test
 
 /*
 	Appli PC sans fenêtre : lecture des sorties de Windows (Wi-Fi, route par
-	défaut), état de la liaison affiché, raccourci de la carte.
+	défaut), état de la liaison affiché, raccourci de la carte, icône de la
+	batterie.
 */
 class DesktopTest
 {
@@ -108,5 +118,38 @@ class DesktopTest
 		assertNull(argAfter(arrayOf("--envoyer"), ExplorerMenu.kSendArg))
 		assertNull(argAfter(arrayOf("--demarrage"), kLinkArg))
 		assertEquals("bridgeplus:ouvrir?id=a%2Bb%3D", WinToast.link("ouvrir", "a+b="))
+	}
+
+	/*
+		Icône de la batterie : info-bulle, couleur des chiffres et de la jauge
+		(charge, sous 20 %), et dessin aux tailles de la barre des tâches, avec ou sans
+		téléphone relié, sur barre sombre ou claire.
+	*/
+	@Test
+	fun batteryIcon()
+	{
+		assertEquals("Pixel 9 · 78 %", batteryTooltip("Pixel 9", LinkMessage.Battery(78, false)))
+		assertEquals("Pixel 9 · 15 % · en charge", batteryTooltip("Pixel 9", LinkMessage.Battery(15, true)))
+		assertEquals("BridgePlus — aucun téléphone relié", batteryTooltip(null, null))
+		assertEquals(BridgeColors.success, batteryColor(LinkMessage.Battery(15, true), BridgeColors.text))
+		assertEquals(BridgeColors.danger, batteryColor(LinkMessage.Battery(19, false), BridgeColors.text))
+		assertEquals(BridgeColors.text, batteryColor(LinkMessage.Battery(20, false), BridgeColors.text))
+		for (vSide in listOf(16, 32))
+		{
+			for (vBattery in listOf(null, LinkMessage.Battery(5, false), LinkMessage.Battery(78, true), LinkMessage.Battery(100, false)))
+			{
+				for (vLight in listOf(false, true))
+				{
+					val vImage = ImageBitmap(vSide, vSide)															// icône rendue
+					val vPaint = BatteryPainter(vBattery, vLight)													// peintre
+					CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(vImage), Size(vSide.toFloat(), vSide.toFloat())) {
+						with(vPaint) { draw(size) }
+					}
+					val vPixels = vImage.toPixelMap()																// pixels
+					val vInked  = (0 until vSide).sumOf { vX -> (0 until vSide).count { vY -> vPixels[vX, vY].alpha > 0.1f } }	// pixels dessinés (le tiret et la piste sont grisés)
+					assertTrue("$vSide px, $vBattery, claire : $vLight", vInked in vSide..vSide * vSide * 3 / 4)
+				}
+			}
+		}
 	}
 }

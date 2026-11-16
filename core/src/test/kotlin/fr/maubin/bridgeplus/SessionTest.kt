@@ -371,11 +371,33 @@ class SessionTest
 		val vHub  = hub(emptyMap())																	// serveur sur 127.0.0.1
 		val vPort = vHub.port																		// son port
 		Socket("127.0.0.1", vPort).close()
-		try { Socket("127.0.0.2", vPort).close(); fail("connexion acceptée hors des adresses d'écoute") } catch (inError: IOException) { }
+		assertNull("connexion acceptée hors des adresses d'écoute", answered("127.0.0.2", vPort))
 		vHub.bind(emptyList())
 		assertEquals(0, vHub.port)
-		try { Socket("127.0.0.1", vPort).close(); fail("écoute encore ouverte") } catch (inError: IOException) { }
+		assertNull("écoute encore ouverte", answered("127.0.0.1", vPort))
 	}
+
+	/*
+		Connexion obtenue à cette adresse, décrite (« local → distant ») ;
+		null si personne n'écoute. Une socket connectée à elle-même ne compte
+		pas : sous Linux, quand le port local tiré pour le client est justement
+		le port visé (plage éphémère, comme ceux des serveurs de test), la
+		connexion aboutit sans aucun serveur.
+		inHost : adresse
+		inPort : port
+	*/
+	private fun answered(
+		inHost : String,
+		inPort : Int
+	): String? =
+		try
+		{
+			Socket(inHost, inPort).use { vSocket ->
+				if (vSocket.localPort == inPort && vSocket.localAddress == vSocket.inetAddress) null
+				else "${vSocket.localAddress.hostAddress}:${vSocket.localPort} → ${vSocket.inetAddress.hostAddress}:${vSocket.port}"
+			}
+		}
+		catch (inError: IOException) { null }
 
 	// --- Outils ---------------------------------------------------------------
 

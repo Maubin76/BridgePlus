@@ -1,0 +1,72 @@
+# Visuels du README : rend hors écran la fenêtre du PC, la carte de l'historique
+# et les écrans du téléphone avec des données d'exemple (ReadmeScreenshotsTest),
+# puis les pose dans des cadres sur un fond gris (ci/vitrines.py). Le résultat,
+# à recopier dans doc/images, est joint à l'exécution (« visuels »).
+#
+# Sur Windows, pour la police des barres de titre (Segoe UI). Lancé quand le
+# rendu, le script ou l'interface changent sur develop, ou à la main depuis
+# l'onglet Actions.
+name: Visuels du README
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - desktop/src/test/kotlin/fr/maubin/bridgeplus/desktop/ReadmeScreenshotsTest.kt
+      - desktop/src/main/**
+      - ui/src/**
+      - ci/vitrines.py
+      - .github/workflows/visuels.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visuels:
+    name: Visuels
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: "Récupérer les polices Satoshi (non versionnées, voir leur licence)"
+        shell: bash
+        run: bash ci/polices.sh
+
+      - name: Installer le JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Préparer Gradle (avec cache)
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Rendre les écrans (hors écran, données d'exemple)
+        shell: bash
+        run: ./gradlew :desktop:test --tests "*ReadmeScreenshotsTest*"
+
+      - name: Installer Python et Pillow
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Composer les visuels
+        shell: bash
+        run: |
+          python -m pip install --quiet pillow
+          python ci/vitrines.py
+
+      - name: Joindre les visuels et les rendus bruts
+        uses: actions/upload-artifact@v7
+        with:
+          name: visuels
+          path: |
+            doc/images/
+            desktop/build/captures/readme/
+          retention-days: 14

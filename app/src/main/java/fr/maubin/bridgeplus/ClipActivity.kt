@@ -10,6 +10,7 @@ import android.service.quicksettings.TileService
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import fr.maubin.bridgeplus.link.isWebLink
 import fr.maubin.bridgeplus.peers.PairedPc
 import fr.maubin.bridgeplus.ui.theme.BridgePlusTheme
 
@@ -17,7 +18,8 @@ import fr.maubin.bridgeplus.ui.theme.BridgePlusTheme
 	Activité transparente des gestes explicites, qui ne montre rien d'autre
 	qu'un court message (et, s'il faut choisir le PC, un petit dialogue) :
 	- « Envoyer au PC » de la tuile : lit le presse-papiers et l'envoie ;
-	- « Envoyer au PC » du menu de partage : envoie le texte partagé, ou un
+	- « Envoyer au PC » du menu de partage : ouvre un lien dans le navigateur
+	  du PC, envoie un autre texte (presse-papiers du PC), ou un
 	  ou plusieurs fichiers (photos, vidéos, documents), portés ensuite par
 	  le service ;
 	- « Copier » de la notification d'un texte reçu : le place dans le
@@ -40,6 +42,7 @@ class ClipActivity : ComponentActivity()
 		{
 			intent?.action == kActionCopy -> done(copyWaiting())
 			vUris.isNotEmpty()            -> sendShared(vUris)
+			intent?.action == Intent.ACTION_SEND && isWebLink(intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()) -> bridgeApp.sendLink(intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty(), ::done)
 			intent?.action == Intent.ACTION_SEND -> bridgeApp.sendClip(intent.getStringExtra(Intent.EXTRA_TEXT), false, true, ::done)
 			else                          -> readClipboard(this).let { bridgeApp.sendClip(it.text, it.sensitive, true, ::done) }
 		}

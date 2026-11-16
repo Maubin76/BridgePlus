@@ -11,6 +11,7 @@ import fr.maubin.bridgeplus.clip.clipMessage
 import fr.maubin.bridgeplus.history.ClipHistory
 import fr.maubin.bridgeplus.link.LinkMessage
 import fr.maubin.bridgeplus.link.discoverPcs
+import fr.maubin.bridgeplus.link.isWebLink
 import fr.maubin.bridgeplus.notice.NoticeOutbox
 import fr.maubin.bridgeplus.peers.PairedPc
 import fr.maubin.bridgeplus.peers.PhoneLink
@@ -20,6 +21,7 @@ import fr.maubin.bridgeplus.store.SealedFile
 import fr.maubin.bridgeplus.transfer.FileTransfers
 import fr.maubin.bridgeplus.transfer.Transfer
 import fr.maubin.bridgeplus.transfer.TransferState
+import fr.maubin.bridgeplus.ui.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -52,6 +54,15 @@ class BridgeApp : Application()
 
 	private val fScope    = CoroutineScope(SupervisorJob() + Dispatchers.Default)			// suivi des transferts
 	private val fSources  = ConcurrentHashMap<String, String>()								// adresses des fichiers envoyés, par transfert
+	private val fMain     = Handler(Looper.getMainLooper())									// fil principal (sonnerie, liens)
+	@Volatile private var fBattery : LinkMessage.Battery? = null								// dernière batterie connue
+
+	/*
+		Mises à jour de l'appli (dernière version publiée sur GitHub).
+	*/
+	val updates: UpdateManager by lazy {
+		UpdateManager(AndroidUpdateInstaller(this), { fSettings.value.updates }, { fSettings.value.ignoredUpdate }, { vVersion -> updateSettings { it.copy(ignoredUpdate = vVersion) } })
+	}
 
 	/*
 		Liaison du téléphone (fichier des appareils scellé par le Keystore) ;
@@ -69,6 +80,8 @@ class BridgeApp : Application()
 				{
 					is LinkMessage.Clip          -> received(vPc.label, vMessage)
 					is LinkMessage.NoticeDismiss -> NoticeListener.dismiss(vMessage.key)
+					is LinkMessage.Ring          -> fMain.post { if (vMessage.on) Ringer.start(this) else Ringer.stop(this) }
+					is LinkMessage.OpenLink      -> if (isWebLink(vMessage.url)) fMain.post { openLinkFromPc(this, vPc.label, vMessage.url.trim()) }
 					else                         -> files.onMessage(vPc.id, vPc.label, vMessage)
 				}
 			},
@@ -120,13 +133,29 @@ class BridgeApp : Application()
 				}
 			)
 			vManager.createNotificationChannel(
+				NotificationChannel(kChannelRing, "Sonnerie", NotificationManager.IMPORTANCE_HIGH).apply {
+					description = "Le PC fait sonner le téléphone pour le retrouver : « Arrêter » coupe la sonnerie."
+					setSound(null, null)
+				}
+			)
+			vManager.createNotificationChannel(
+				NotificationChannel(kChannelLinks, "Liens du PC", NotificationManager.IMPORTANCE_HIGH).apply {
+					description = "Lien envoyé par le PC : touchez pour l'ouvrir."
+				}
+			)
+			vManager.createNotificationChannel(
 				NotificationChannel(kChannelClips, "Textes reçus", NotificationManager.IMPORTANCE_DEFAULT).apply {
 					description = "Texte reçu du PC qu'Android n'a pas laissé copier : touchez « Copier »."
 				}
 			)
 		}
 		NetworkWatch.register(this)
-		fScope.launch { link.state.map { it.connected.map { vPc -> vPc.id }.toSet() }.distinctUntilChanged().collect { notices.newSession() } }
+		fScope.launch {
+			link.state.map { it.connected.map { vPc -> vPc.id }.toSet() }.distinctUntilChanged().collect {
+				notices.newSession()
+				fBattery?.let { vBattery -> fSender.execute { link.sendAll(vBattery) } }
+			}
+		}
 		val vLocks = TransferWakeLocks(this)															// verrous d'éveil
 		fScope.launch {
 			files.transfers.collect { vAll ->
@@ -134,6 +163,40 @@ class BridgeApp : Application()
 				vLocks.hold(vActive.isNotEmpty())
 				showProgress(this@BridgeApp, vActive)
 			}
+		}
+	}
+
+	/*
+		Batterie lue par le service : envoyée aux PC reliés si elle a changé
+		(et à chaque nouvelle connexion).
+		inLevel    : niveau (%)
+		inCharging : en charge
+	*/
+	fun batteryChanged(
+		inLevel    : Int,
+		inCharging : Boolean
+	)
+	{
+		val vBattery = LinkMessage.Battery(inLevel, inCharging)										// batterie
+		if (vBattery == fBattery) return
+		fBattery = vBattery
+		fSender.execute { link.sendAll(vBattery) }
+	}
+
+	/*
+		Envoie un lien aux PC reliés (il s'ouvre dans leur navigateur) ; rend
+		le message à montrer sur le fil de l'écran.
+		inUrl    : lien web
+		inOnDone : message à montrer
+	*/
+	fun sendLink(
+		inUrl    : String,
+		inOnDone : (String) -> Unit
+	)
+	{
+		fSender.execute {
+			val vPeers = link.sendAll(LinkMessage.OpenLink(inUrl.trim()))							// PC joints
+			fMain.post { inOnDone(if (vPeers.isEmpty()) "Aucun PC relié : le lien n'est pas parti." else "Ouvert sur ${vPeers.joinToString(" et ")}") }
 		}
 	}
 

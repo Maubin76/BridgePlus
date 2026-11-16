@@ -5,8 +5,10 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
@@ -32,12 +34,23 @@ private const val kNotificationId = 1												// notification du service
 	de chez soi il s'arrête, et c'est NetworkWatch qui le relance au retour.
 	Sa notification, la plus discrète possible, dit seulement « Relié à
 	<PC> ». Un changement de Wi-Fi relance aussitôt les PC absents ; la perte
-	du Wi-Fi de la maison arrête le service.
+	du Wi-Fi de la maison arrête le service. Il suit aussi la batterie, que
+	le PC affiche.
 */
 class LinkService : Service()
 {
 	private val fScope    = CoroutineScope(SupervisorJob() + Dispatchers.Default)	// suivi de l'état
 	private var fCallback : ConnectivityManager.NetworkCallback? = null				// écoute du Wi-Fi
+	private val fBattery  = object : BroadcastReceiver()
+	{
+		override fun onReceive(
+			inContext : Context,
+			inIntent  : Intent
+		)
+		{
+			batteryOf(inIntent)?.let { (vLevel, vCharging) -> bridgeApp.batteryChanged(vLevel, vCharging) }
+		}
+	}																						// batterie (annonce du système)
 
 	override fun onBind(inIntent: Intent?): IBinder? = null
 
@@ -51,6 +64,7 @@ class LinkService : Service()
 			}
 		}
 		watchWifi()
+		registerReceiver(fBattery, IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.let { vSticky -> batteryOf(vSticky)?.let { (vLevel, vCharging) -> bridgeApp.batteryChanged(vLevel, vCharging) } }
 	}
 
 	override fun onStartCommand(
@@ -73,6 +87,7 @@ class LinkService : Service()
 	override fun onDestroy()
 	{
 		fCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(it) } }
+		runCatching { unregisterReceiver(fBattery) }
 		fScope.cancel()
 		bridgeLink.stop()
 		super.onDestroy()

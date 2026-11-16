@@ -258,6 +258,13 @@ class PhoneLink(
 	fun removeHome(inNetwork: NetworkId) = save(fPeers.copy(home = fPeers.home - inNetwork))
 
 	/*
+		Remplace les réseaux de la maison (restauration d'une sauvegarde).
+		inHome : réseaux de la maison
+	*/
+	@Synchronized
+	fun setHome(inHome: List<NetworkId>) = save(fPeers.copy(home = inHome.distinct()))
+
+	/*
 		Oublie le message « PC qui a oublié ce téléphone ».
 	*/
 	fun clearForgotten() = fState.update { it.copy(forgotten = null) }

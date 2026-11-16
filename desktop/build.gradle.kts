@@ -55,6 +55,8 @@ sourceSets.main { resources.srcDir(generateVersion) }
 tasks.withType<Test>().configureEach {
 	systemProperty("java.awt.headless", "true")
 	systemProperty("bridgeplus.testPressePapiers", (findProperty("bridgeplus.testPressePapiers") != null).toString())
+	// Captures du README (doc/images) : ./gradlew :desktop:test --tests "*PreviewRenderTest*" -Pbridgeplus.captures
+	systemProperty("bridgeplus.captures", (findProperty("bridgeplus.captures") != null).toString())
 }
 
 compose.desktop {

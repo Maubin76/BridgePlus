@@ -174,6 +174,36 @@ sealed interface LinkMessage
 		val pkg : String,
 		val png : String
 	) : LinkMessage
+
+	/*
+		Faire sonner le téléphone (pour le retrouver), même en silencieux ; ou
+		arrêter la sonnerie.
+		on : vrai pour sonner, faux pour arrêter
+	*/
+	@Serializable
+	@SerialName("sonnerie")
+	data class Ring(val on: Boolean) : LinkMessage
+
+	/*
+		Batterie du téléphone, envoyée quand le niveau change.
+		level    : niveau (0 à 100)
+		charging : en charge
+	*/
+	@Serializable
+	@SerialName("batterie")
+	data class Battery(
+		val level    : Int,
+		val charging : Boolean
+	) : LinkMessage
+
+	/*
+		Lien à ouvrir dans le navigateur de l'autre appareil (http ou https
+		seulement : voir isWebLink).
+		url : adresse
+	*/
+	@Serializable
+	@SerialName("lien")
+	data class OpenLink(val url: String) : LinkMessage
 }
 
 /*
@@ -189,3 +219,17 @@ internal fun encodeMessage(inMessage: LinkMessage): ByteArray =
 */
 internal fun decodeMessage(inBytes: ByteArray): LinkMessage? =
 	runCatching { kMessageJson.decodeFromString(LinkMessage.serializer(), String(inBytes, Charsets.UTF_8)) }.getOrNull()
+
+/*
+	Vrai si le texte est un seul lien web (http ou https), sans espace :
+	seuls ces liens s'ouvrent sur l'autre appareil (jamais un fichier, un
+	programme ou un autre protocole).
+	inText : texte
+*/
+fun isWebLink(inText: String): Boolean
+{
+	val vText = inText.trim()																		// texte sans espaces autour
+	if (vText.length > 4096 || vText.any { it.isWhitespace() }) return false
+	val vUri  = runCatching { java.net.URI(vText) }.getOrNull() ?: return false					// adresse lue
+	return (vUri.scheme.equals("http", true) || vUri.scheme.equals("https", true)) && !vUri.host.isNullOrBlank()
+}

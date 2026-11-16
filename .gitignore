@@ -19,3 +19,4 @@ local.properties
 ui/src/commonMain/composeResources/font/satoshi_*.ttf
 /.idea/*
 !/.idea/misc.xml
+__pycache__/

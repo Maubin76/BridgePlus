@@ -10,7 +10,9 @@
      activité transparente de la tuile et du partage), jamais un contenu marqué sensible. Fichiers :
      reçus dans Download/BridgePlus par MediaStore (sans autorisation de stockage) ; verrou d'éveil
      pendant un transfert, pour qu'il avance écran éteint. Notifications : lues par l'écoute que
-     l'utilisateur autorise, envoyées au PC selon la liste blanche, jamais enregistrées. -->
+     l'utilisateur autorise, envoyées au PC selon la liste blanche, jamais enregistrées. Installation
+     de paquets : mises à jour publiées sur GitHub (vérification désactivable). Vibreur : sonnerie
+     demandée par le PC pour retrouver le téléphone. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
 	<uses-permission android:name="android.permission.INTERNET" />
@@ -27,6 +29,8 @@
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 	<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+	<uses-permission android:name="android.permission.VIBRATE" />
 	<uses-feature android:name="android.hardware.camera" android:required="false" />
 
 	<!-- Liste blanche des notifications : noms et icônes des applis de l'écran d'accueil (rien d'autre). -->
@@ -115,6 +119,20 @@
 				<action android:name="android.service.notification.NotificationListenerService" />
 			</intent-filter>
 		</service>
+
+		<!-- « Arrêter » de la sonnerie demandée par le PC. -->
+		<receiver
+			android:name=".RingStopReceiver"
+			android:exported="false" />
+
+		<!-- Résultat de l'installeur du système pour une mise à jour. -->
+		<receiver
+			android:name=".UpdateInstallReceiver"
+			android:exported="false">
+			<intent-filter>
+				<action android:name="fr.maubin.bridgeplus.action.INSTALL_STATUS" />
+			</intent-filter>
+		</receiver>
 
 		<!-- « Annuler » de la notification de progression d'un transfert. -->
 		<receiver
