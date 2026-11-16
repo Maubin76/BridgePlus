@@ -110,7 +110,7 @@ Copiez sur le PC, collez sur le téléphone, et inversement.
 | **Glisser-déposer** | Sur la fenêtre ou la carte ; « Envoyer au téléphone » dans l'Explorateur | — | ✅ |
 | **Notifications du téléphone** | Notifications de Windows, liste blanche, fermées des deux côtés | ✅ | ✅ |
 | **Faire sonner le téléphone** | À plein volume même en silencieux, arrêt seul après 60 s | ✅ | ✅ |
-| **Batterie du téléphone** | Sur le PC (icône, page Appareils, carte), alerte facultative sous 20 % | ✅ | ✅ |
+| **Batterie du téléphone** | Sur le PC : icône dans la barre des tâches (pourcentage et jauge), page Appareils, carte ; alerte facultative sous 20 % | ✅ | ✅ |
 | **Liens** | Un lien partagé s'ouvre dans le navigateur de l'autre appareil | ✅ | ✅ |
 | **Plusieurs appareils** | Plusieurs téléphones par PC, plusieurs PC par téléphone ; renommer, oublier | ✅ | ✅ |
 | **Assistant** | Premier lancement guidé, chaque étape facultative | ✅ | — |

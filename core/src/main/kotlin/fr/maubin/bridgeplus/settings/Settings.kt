@@ -20,6 +20,7 @@ private val kSettingsJson = Json { ignoreUnknownKeys = true; encodeDefaults = tr
 	noticeApps        : téléphone : choix par appli (paquet → envoyée ou non) ; une appli
 	                    absente suit le défaut (messageries oui, le reste non)
 	batteryAlert      : PC : alerte quand la batterie du téléphone passe sous 20 %
+	batteryIcon       : PC : icône de la batterie du téléphone dans la barre des tâches
 	onboardingDone    : téléphone : assistant de premier lancement vu
 	receiveFolder     : PC : dossier de réception des fichiers ; vide pour Téléchargements\BridgePlus
 	launchAtStartup   : PC : BridgePlus démarre avec Windows
@@ -36,6 +37,7 @@ data class BridgeSettings(
 	val noticesShow       : Boolean = true,
 	val noticeApps        : Map<String, Boolean> = emptyMap(),
 	val batteryAlert      : Boolean = true,
+	val batteryIcon       : Boolean = true,
 	val onboardingDone    : Boolean = false,
 	val receiveFolder     : String  = "",
 	val launchAtStartup   : Boolean = true,

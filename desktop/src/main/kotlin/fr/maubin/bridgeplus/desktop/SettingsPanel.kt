@@ -80,6 +80,10 @@ fun SettingsPanel(inApp: DesktopApp)
 				inApp.updateSettings { it.copy(batteryAlert = vOn) }
 			}
 			SettingsDivider()
+			OnOffSetting("Batterie dans la barre des tâches", "Une icône près de l'horloge montre la batterie du téléphone relié, avec une jauge verte en charge et rouge sous 20 %. Windows 11 la range d'abord dans les icônes masquées (^) : glissez-la une fois dans la barre.", vSettings.batteryIcon) { vOn ->
+				inApp.updateSettings { it.copy(batteryIcon = vOn) }
+			}
+			SettingsDivider()
 			OnOffSetting("Afficher les notifications du téléphone", "Les applis choisies sur le téléphone (les messageries par défaut) s'affichent ici en notifications de Windows, qui respectent « Ne pas déranger ». Les fermer ici les masque sur le téléphone. Rien n'est enregistré.", vSettings.noticesShow) { vOn ->
 				inApp.updateSettings { it.copy(noticesShow = vOn) }
 			}

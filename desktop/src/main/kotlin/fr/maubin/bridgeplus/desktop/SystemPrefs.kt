@@ -2,9 +2,13 @@ package fr.maubin.bridgeplus.desktop
 
 import com.sun.jna.Library
 import com.sun.jna.Native
+import com.sun.jna.platform.win32.Advapi32Util
+import com.sun.jna.platform.win32.WinReg
 import com.sun.jna.ptr.IntByReference
 
 private const val kClientAreaAnimation = 0x1042									// SPI_GETCLIENTAREAANIMATION : « Afficher les animations dans Windows »
+private const val kPersonalize         = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"	// clé du thème de Windows
+private const val kSystemLight         = "SystemUsesLightTheme"							// 1 : barre des tâches claire
 
 /*
 	Accès aux réglages du système (user32.dll).
@@ -45,5 +49,15 @@ object SystemPrefs
 		val vUser  = fUser ?: return true
 		val vValue = IntByReference(1)														// valeur lue
 		return runCatching { if (vUser.SystemParametersInfoW(kClientAreaAnimation, 0, vValue, 0)) vValue.value != 0 else true }.getOrDefault(true)
+	}
+
+	/*
+		Vrai si la barre des tâches est claire (Paramètres › Personnalisation ›
+		Couleurs › « Mode Windows » clair) ; faux si sombre, ou illisible.
+	*/
+	fun lightTaskbar(): Boolean
+	{
+		if (fUser == null) return false
+		return runCatching { Advapi32Util.registryGetIntValue(WinReg.HKEY_CURRENT_USER, kPersonalize, kSystemLight) == 1 }.getOrDefault(false)
 	}
 }

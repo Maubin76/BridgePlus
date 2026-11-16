@@ -158,6 +158,7 @@ fun main(inArgs: Array<String>)
 				Item("Quitter", onClick = { vApp.stop(); vInstance.release(); exitApplication() })
 			}
 		)
+		BatteryTray(vApp) { vVisible = true }
 		val vWindow = rememberWindowState(size = DpSize(880.dp, 720.dp), position = WindowPosition.Aligned(Alignment.Center))	// fenêtre
 		Window(
 			visible        = vVisible,
