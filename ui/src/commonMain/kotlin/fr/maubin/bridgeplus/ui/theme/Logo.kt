@@ -26,9 +26,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -51,9 +48,9 @@ private const val kMarkTop    = 9.3f
 private const val kMarkScale  = .768f														// côté du repère de l'emblème / côté de la tuile
 private const val kGridStep   = 10.7f														// pas de la grille (unités)
 
-const val kPhoneData   = "M17,27 H27 A5,5 0 0 1 32,32 V66 A5,5 0 0 1 27,71 H17 A5,5 0 0 1 12,66 V32 A5,5 0 0 1 17,27 Z"	// téléphone (repère de l'emblème)
-const val kScreenData  = "M52,27 H86 A4,4 0 0 1 90,31 V57 A4,4 0 0 1 86,61 H52 A4,4 0 0 1 48,57 V31 A4,4 0 0 1 52,27 Z M62,73 H76 M69,61 V73"	// écran du PC et son pied
-val kLinkDots          = listOf(Offset(37f, 49f), Offset(43f, 49f))						// points de la liaison (repère de l'emblème)
+const val kPhoneData   = "M15,27 H23 A5,5 0 0 1 28,32 V66 A5,5 0 0 1 23,71 H15 A5,5 0 0 1 10,66 V32 A5,5 0 0 1 15,27 Z"	// téléphone (repère de l'emblème)
+const val kScreenData  = "M54,27 H86 A4,4 0 0 1 90,31 V57 A4,4 0 0 1 86,61 H54 A4,4 0 0 1 50,57 V31 A4,4 0 0 1 54,27 Z M63,73 H77 M70,61 V73"	// écran du PC et son pied
+val kLinkDots          = listOf(Offset(35.5f, 49f), Offset(42.5f, 49f))						// points de la liaison (repère de l'emblème)
 const val kDotRadius   = 2.8f																// rayon maximal d'un point (repère de l'emblème)
 
 private val kMistTop   = Color(0xFF6E6E71)													// brume, en haut de la tuile
@@ -227,9 +224,9 @@ fun BridgeLogo(
 }
 
 /*
-	Logo suivi du nom, en deux tons comme les titres : « Bridge » en gris,
-	« Plus » en blanc ; en haut à gauche des écrans clés et de la fenêtre
-	du PC.
+	Logo suivi du nom « BridgePlus », en haut à gauche des écrans clés et de
+	la fenêtre du PC. D'une seule couleur : en deux tons, « Bridge » se
+	perdrait dans la brume claire du haut des écrans clés.
 	inModifier : modificateur
 */
 @Composable
@@ -237,12 +234,6 @@ fun BridgeBrand(inModifier: Modifier = Modifier)
 {
 	Row(inModifier, horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
 		BridgeLogo()
-		BasicText(
-			buildAnnotatedString {
-				withStyle(SpanStyle(color = BridgeColors.textMuted)) { append("Bridge") }
-				append("Plus")
-			},
-			style = bridgeType().title
-		)
+		BasicText("BridgePlus", style = bridgeType().title)
 	}
 }
