@@ -10,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -19,37 +18,60 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToLong
-import kotlin.random.Random
 
 /*
-	Logo de BridgePlus, dans la matière de celui de KeePlus : un pont noir
-	(tablier fin posé sur une arche) surmonté du « + » de la gamme, moitié
-	droite en gris (facette) ; posé sur une plaque d'aluminium brossé au
-	chanfrein usiné, pont gravé dans le métal, lumière unique en haut à
-	gauche. Tout est décrit dans un carré de 100 unités.
+	Logo de BridgePlus, dans la matière de l'appli : une tuile noire où la
+	brume grise descend du haut sur une grille fine (le décor des écrans
+	clés), et, au trait arrondi comme les icônes, le téléphone en gris, deux
+	points de liaison, et l'écran du PC en blanc (deux tons, comme les
+	titres). Le trait s'épaissit aux petites tailles pour rester visible.
+	La tuile est décrite dans un carré de 100 unités ; l'emblème, dans son
+	propre carré de 100 unités (repère de l'emblème), posé dans la tuile.
 */
 
-private const val kTileRadius = 26f														// arrondi de la plaque (unités)
-private const val kBevel      = 2.72f													// largeur du chanfrein (unités)
-private const val kMarkX      = 22.0														// repère du pont : coin et côté (unités)
-private const val kMarkY      = 22.0
-private const val kMarkS      = 56.0
+private const val kTileRadius = 23.2f														// arrondi de la tuile (unités)
+private const val kMarkLeft   = 11.6f														// position du repère de l'emblème dans la tuile (unités)
+private const val kMarkTop    = 9.3f
+private const val kMarkScale  = .768f														// côté du repère de l'emblème / côté de la tuile
+private const val kGridStep   = 10.7f														// pas de la grille (unités)
 
-private val kInk     = Color(0xFF0B0B0C)													// noir du bouclier
-private val kFacet   = Color(0xFF2C2C2E)													// gris de la facette
-private val kSilver  = listOf(Color(0xFFF4F4F5), Color(0xFFD9D9DB), Color(0xFFB3B3B6))	// argent de la plaque, du clair au sombre
+const val kPhoneData   = "M17,27 H27 A5,5 0 0 1 32,32 V66 A5,5 0 0 1 27,71 H17 A5,5 0 0 1 12,66 V32 A5,5 0 0 1 17,27 Z"	// téléphone (repère de l'emblème)
+const val kScreenData  = "M52,27 H86 A4,4 0 0 1 90,31 V57 A4,4 0 0 1 86,61 H52 A4,4 0 0 1 48,57 V31 A4,4 0 0 1 52,27 Z M62,73 H76 M69,61 V73"	// écran du PC et son pied
+val kLinkDots          = listOf(Offset(37f, 49f), Offset(43f, 49f))						// points de la liaison (repère de l'emblème)
+const val kDotRadius   = 2.8f																// rayon maximal d'un point (repère de l'emblème)
+
+private val kMistTop   = Color(0xFF6E6E71)													// brume, en haut de la tuile
+private val kMistMid   = Color(0xFF2E2E30)													// brume, vers 40 %
+
+/*
+	Épaisseur du trait de l'emblème selon la taille du logo (taille optique),
+	dans le repère de l'emblème : fin en grand, plus épais en petit pour
+	garder au moins un pixel.
+	inSide : côté du logo (pixels)
+*/
+fun markStroke(inSide: Float): Float = when
+{
+	inSide >= 96f -> 5f
+	inSide >= 48f -> 6.5f
+	inSide >= 24f -> 8.5f
+	else          -> 10.5f
+}
 
 /*
 	Nombre au format des tracés SVG.
@@ -58,10 +80,9 @@ private val kSilver  = listOf(Color(0xFFF4F4F5), Color(0xFFD9D9DB), Color(0xFFB3
 private fun n(inValue: Double): String = ((inValue * 100).roundToLong() / 100.0).toString()
 
 /*
-	Tracé SVG du pont dans un repère carré : tablier sur toute la largeur,
-	arche dessous (bande de la largeur du repère, ouverte en bas), « + » au
-	centre au-dessus. Rempli en pair-impair (les parties ne se chevauchent
-	pas).
+	Tracé SVG du pont du décor dans un repère carré : tablier sur toute la
+	largeur, arche dessous (bande de la largeur du repère, ouverte en bas).
+	Rempli en pair-impair (les parties ne se chevauchent pas).
 	inX, inY : coin du repère
 	inS      : côté du repère
 */
@@ -76,22 +97,8 @@ fun bridgeData(
 	val vInner = n(.296875 * inS)															// rayon intérieur de l'arche
 	return "M${p(0.0, .390625)} L${p(1.0, .390625)} L${p(1.0, .484375)} L${p(0.0, .484375)} Z " +
 		"M${p(.09375, .921875)} L${p(.09375, .890625)} A$vOuter,$vOuter 0 0 1 ${p(.90625, .890625)} L${p(.90625, .921875)} " +
-		"L${p(.796875, .921875)} L${p(.796875, .890625)} A$vInner,$vInner 0 0 0 ${p(.203125, .890625)} L${p(.203125, .921875)} Z " +
-		"M${p(.4609375, .078125)} L${p(.5390625, .078125)} L${p(.5390625, .1484375)} L${p(.609375, .1484375)} L${p(.609375, .2265625)} " +
-		"L${p(.5390625, .2265625)} L${p(.5390625, .296875)} L${p(.4609375, .296875)} L${p(.4609375, .2265625)} L${p(.390625, .2265625)} " +
-		"L${p(.390625, .1484375)} L${p(.4609375, .1484375)} Z"
+		"L${p(.796875, .921875)} L${p(.796875, .890625)} A$vInner,$vInner 0 0 0 ${p(.203125, .890625)} L${p(.203125, .921875)} Z"
 }
-
-/*
-	Tracé SVG de la facette : moitié droite du repère du pont.
-	inX, inY : coin du repère
-	inS      : côté du repère
-*/
-fun facetData(
-	inX : Double,
-	inY : Double,
-	inS : Double
-): String = "M${n(inX + inS / 2)},${n(inY)} L${n(inX + inS)},${n(inY)} L${n(inX + inS)},${n(inY + inS)} L${n(inX + inS / 2)},${n(inY + inS)} Z"
 
 /*
 	Tracé Compose d'un tracé SVG.
@@ -100,7 +107,8 @@ fun facetData(
 private fun path(inData: String): Path = PathParser().parsePathString(inData).toPath()
 
 /*
-	Pont du logo, dans un carré de côté inSize : sert au grand décor flou.
+	Pont du décor, dans un carré de côté inSize : sert au grand décor flou
+	des écrans clés.
 	inSize   : côté du carré, en pixels
 	inOrigin : coin haut gauche du carré
 */
@@ -110,120 +118,102 @@ fun bridgePath(
 ): Path = path(bridgeData(inOrigin.x.toDouble(), inOrigin.y.toDouble(), inSize.toDouble())).apply { fillType = PathFillType.EvenOdd }
 
 /*
-	Plaque d'aluminium brossé, lumière en haut à gauche, sur un contour
-	donné : stries horizontales continues, lumière douce, ombre légère.
-	inShape  : contour de la plaque (pixels)
-	inBounds : rectangle de la plaque (dégradé et lumière s'y calent)
-	inUnit   : pixels par unité du logo (finesse des stries)
+	Fond de la tuile sur toute la zone de dessin : brume grise en haut, noir
+	à partir des deux tiers, grille fine estompée vers le bas (fond de
+	l'icône adaptative Android, tuile du logo).
+	inUnit : pixels par unité de la tuile ; par défaut, la zone est une
+	         tuile de 100 unités
+	inGrid : grille dessinée (invisible et brouillonne en très petit)
 */
-private fun DrawScope.drawMetal(
-	inShape  : Path,
-	inBounds : Rect,
-	inUnit   : Float
+fun DrawScope.drawLogoGround(
+	inUnit : Float   = minOf(size.width, size.height) / 100f,
+	inGrid : Boolean = true
 )
 {
-	val vW      = inBounds.width																// largeur
-	val vH      = inBounds.height																// hauteur
-	val vSide   = maxOf(vW, vH)																// plus grande dimension
-	val vRandom = Random(5)																	// tirage stable des stries
-	drawPath(inShape, Brush.linearGradient(kSilver, Offset(inBounds.left + vW * .15f, inBounds.top), Offset(inBounds.left + vW * .85f, inBounds.bottom)))
-	clipPath(inShape) {
-		var vY = inBounds.top																	// hauteur de la strie
-		while (vY < inBounds.bottom)
-		{
-			val vLight = vRandom.nextBoolean()													// strie claire ou sombre
-			drawLine((if (vLight) Color.White else Color.Black).copy(alpha = (.008f + vRandom.nextFloat() * .022f) * 2.4f), Offset(inBounds.left, vY), Offset(inBounds.right, vY), (.06f + vRandom.nextFloat() * .12f) * inUnit)
-			vY += (.08f + vRandom.nextFloat() * .16f) * inUnit
-		}
-		drawRect(Brush.radialGradient(listOf(Color.White.copy(alpha = .44f), Color.Transparent), Offset(inBounds.left + vW * .2f, inBounds.top + vH * .1f), vSide * .75f))
-		drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .20f)), Offset(inBounds.left + vW * .35f, inBounds.top + vH * .3f), vSide * .95f))
+	drawRect(Brush.verticalGradient(0f to kMistTop, .42f to kMistMid, .72f to BridgeColors.void, 1f to BridgeColors.void))
+	if (!inGrid) return
+	val vStep  = kGridStep * inUnit																// pas de la grille
+	val vLine  = (.45f * inUnit).coerceAtLeast(.5f)												// épaisseur des traits
+	val vFade  = Brush.verticalGradient(0f to BridgeColors.gridLine, .55f to BridgeColors.gridLine, .9f to Color.Transparent)	// traits estompés vers le bas
+	var vAt    = vStep																			// position du trait
+	while (vAt < maxOf(size.width, size.height))
+	{
+		drawLine(vFade, Offset(vAt, 0f), Offset(vAt, size.height), vLine)
+		drawLine(vFade, Offset(0f, vAt), Offset(size.width, vAt), vLine)
+		vAt += vStep
 	}
 }
 
 /*
-	Pont du logo, gravé ou à plat, dans le repère du logo (100 unités vers
-	inSide pixels, décalé de inOffset).
+	Emblème du logo (téléphone, liaison, écran du PC), au trait, dans le
+	repère d'un logo de inSide pixels décalé de inOffset.
 	inSide   : côté du logo (pixels)
 	inOffset : position du coin du logo
-	inCarve  : gravure dans le métal (lèvre claire, ombre), de 0 (à plat) à 1
+	inMuted  : couleur du téléphone et de la liaison
+	inText   : couleur de l'écran du PC
+	inWidth  : épaisseur du trait (repère de l'emblème) ; par défaut, selon
+	           la taille
 */
 fun DrawScope.drawLogoMark(
 	inSide   : Float,
 	inOffset : Offset = Offset.Zero,
-	inCarve  : Float  = 1f
+	inMuted  : Color  = BridgeColors.textMuted,
+	inText   : Color  = BridgeColors.text,
+	inWidth  : Float  = markStroke(inSide)
 )
 {
-	val vK    = inSide / 100f																	// pixels par unité
-	val vMark = path(bridgeData(kMarkX, kMarkY, kMarkS)).apply { fillType = PathFillType.EvenOdd }	// pont
-	withTransform({ translate(inOffset.x, inOffset.y); scale(vK, vK, Offset.Zero) }) {
-		if (inCarve > 0f)
-		{
-			translate(.6f, .9f) { drawPath(vMark, Color.White.copy(alpha = .85f * inCarve)) }
-			translate(-.5f, -.7f) { drawPath(vMark, Color.Black.copy(alpha = .32f * inCarve)) }
-		}
-		drawPath(vMark, kInk)
-		clipPath(vMark) { drawPath(path(facetData(kMarkX, kMarkY, kMarkS)), kFacet) }
+	val vK      = inSide / 100f																	// pixels par unité de la tuile
+	val vStroke = Stroke(inWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)				// trait
+	withTransform({
+		translate(inOffset.x + kMarkLeft * vK, inOffset.y + kMarkTop * vK)
+		scale(vK * kMarkScale, vK * kMarkScale, Offset.Zero)
+	}) {
+		drawPath(path(kPhoneData), inMuted, style = vStroke)
+		kLinkDots.forEach { drawCircle(inMuted, minOf(inWidth / 2f, kDotRadius), it) }
+		drawPath(path(kScreenData), inText, style = vStroke)
 	}
 }
 
 /*
-	Plaque brossée seule, sans chanfrein, sur toute la zone de dessin (fond
-	de l'icône adaptative Android, écran d'ouverture).
-	inUnit : pixels par unité du logo (finesse des stries) ; par défaut, la
-	         zone est un logo de 100 unités
-*/
-fun DrawScope.drawLogoMetal(inUnit: Float = minOf(size.width, size.height) / 100f)
-{
-	val vBounds = Rect(0f, 0f, size.width, size.height)										// zone de dessin
-	drawMetal(Path().apply { addRect(vBounds) }, vBounds, inUnit)
-}
-
-/*
-	Logo complet dans un carré de côté inSide.
-	inSide     : côté (pixels)
-	inMaterial : matière complète (brossé, chanfrein, gravure) ; faux pour
-	             une version à plat, plus nette en très petit
+	Logo complet dans un carré de côté inSide : tuile (brume, grille,
+	liseré) et emblème.
+	inSide   : côté (pixels)
+	inDetail : grille dessinée ; faux en très petit, où elle brouillerait
+	           l'emblème
 */
 fun DrawScope.drawLogo(
-	inSide     : Float,
-	inMaterial : Boolean = true
+	inSide   : Float,
+	inDetail : Boolean = true
 )
 {
 	val vK    = inSide / 100f																	// pixels par unité
-	val vTile = Path().apply { addRoundRect(RoundRect(0f, 0f, inSide, inSide, CornerRadius(kTileRadius * vK))) }	// plaque
-	if (!inMaterial)
-	{
-		drawPath(vTile, Brush.linearGradient(kSilver, Offset(inSide * .15f, 0f), Offset(inSide * .85f, inSide)))
-		drawLogoMark(inSide, inCarve = 0f)
-		return
-	}
-	val vInset = kBevel * vK																	// largeur du chanfrein
-	val vFace  = Path().apply { addRoundRect(RoundRect(vInset, vInset, inSide - vInset, inSide - vInset, CornerRadius(kTileRadius * vK - vInset))) }	// face
-	drawPath(vTile, Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFD2D2D4), Color(0xFF868689)), 0f, inSide))
-	drawMetal(vFace, Rect(0f, 0f, inSide, inSide), vK)
-	drawPath(vFace, Brush.verticalGradient(listOf(Color.White.copy(alpha = .9f), Color.Transparent), 0f, inSide * .06f), style = Stroke(.7f * vK))
+	val vTile = Path().apply { addRoundRect(RoundRect(0f, 0f, inSide, inSide, CornerRadius(kTileRadius * vK))) }	// tuile
+	clipPath(vTile) { drawLogoGround(vK, inDetail) }
+	val vEdge = (.9f * vK).coerceAtLeast(1f)													// épaisseur du liseré
+	drawRoundRect(Color.White.copy(alpha = .14f), Offset(vEdge / 2f, vEdge / 2f), Size(inSide - vEdge, inSide - vEdge), CornerRadius(kTileRadius * vK - vEdge / 2f), style = Stroke(vEdge))
 	drawLogoMark(inSide)
 }
 
 /*
 	Logo en image (icônes de fenêtre et de la zone de notification, fichiers
 	d'icônes).
-	inSize     : côté (pixels)
-	inMaterial : matière complète ; faux pour la version à plat
+	inSize   : côté (pixels)
+	inDetail : grille dessinée ; faux pour le très petit
 */
 fun logoImage(
-	inSize     : Int,
-	inMaterial : Boolean = true
+	inSize   : Int,
+	inDetail : Boolean = inSize >= 48
 ): ImageBitmap
 {
 	val vImage = ImageBitmap(inSize, inSize)													// image
-	CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(vImage), Size(inSize.toFloat(), inSize.toFloat())) { drawLogo(inSize.toFloat(), inMaterial) }
+	CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(vImage), Size(inSize.toFloat(), inSize.toFloat())) { drawLogo(inSize.toFloat(), inDetail) }
 	return vImage
 }
 
 /*
-	Logo de BridgePlus : matière complète à partir de 40 dp, à plat en dessous
-	(la texture y serait invisible et brouillerait le pont).
+	Logo de BridgePlus : grille à partir de 40 dp, sans en dessous (elle y
+	serait invisible et brouillerait l'emblème). Le trait suit la taille en
+	pixels.
 	inModifier : modificateur
 	inSize     : côté du logo
 */
@@ -237,7 +227,9 @@ fun BridgeLogo(
 }
 
 /*
-	Logo suivi du nom « BridgePlus », en haut à gauche des écrans clés.
+	Logo suivi du nom, en deux tons comme les titres : « Bridge » en gris,
+	« Plus » en blanc ; en haut à gauche des écrans clés et de la fenêtre
+	du PC.
 	inModifier : modificateur
 */
 @Composable
@@ -245,6 +237,12 @@ fun BridgeBrand(inModifier: Modifier = Modifier)
 {
 	Row(inModifier, horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
 		BridgeLogo()
-		BasicText("BridgePlus", style = bridgeType().title)
+		BasicText(
+			buildAnnotatedString {
+				withStyle(SpanStyle(color = BridgeColors.textMuted)) { append("Bridge") }
+				append("Plus")
+			},
+			style = bridgeType().title
+		)
 	}
 }

@@ -1,7 +1,9 @@
-# Visuels du README : rend hors écran la fenêtre du PC, la carte de l'historique
-# et les écrans du téléphone avec des données d'exemple (ReadmeScreenshotsTest),
-# puis les pose dans des cadres sur un fond gris (ci/vitrines.py). Le résultat,
-# à recopier dans doc/images, est joint à l'exécution (« visuels »).
+# Visuels du README et fichiers du logo : génère les icônes à partir du dessin du
+# logo (LogoAssetsTest : image de référence, icône Windows, icônes Android), rend
+# hors écran la fenêtre du PC, la carte de l'historique et les écrans du téléphone
+# avec des données d'exemple (ReadmeScreenshotsTest), puis les pose dans des cadres
+# sur un fond gris (ci/vitrines.py). Le résultat, à recopier dans le dépôt, est
+# joint à l'exécution (« visuels »).
 #
 # Sur Windows, pour la police des barres de titre (Segoe UI). Lancé quand le
 # rendu, le script ou l'interface changent sur develop, ou à la main depuis
@@ -13,6 +15,7 @@ on:
     branches: [develop]
     paths:
       - desktop/src/test/kotlin/fr/maubin/bridgeplus/desktop/ReadmeScreenshotsTest.kt
+      - desktop/src/test/kotlin/fr/maubin/bridgeplus/desktop/LogoAssetsTest.kt
       - desktop/src/main/**
       - ui/src/**
       - ci/vitrines.py
@@ -47,9 +50,9 @@ jobs:
       - name: Préparer Gradle (avec cache)
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Rendre les écrans (hors écran, données d'exemple)
+      - name: Générer le logo et rendre les écrans (hors écran, données d'exemple)
         shell: bash
-        run: ./gradlew :desktop:test --tests "*ReadmeScreenshotsTest*"
+        run: ./gradlew :desktop:test --tests "*LogoAssetsTest*" --tests "*ReadmeScreenshotsTest*"
 
       - name: Installer Python et Pillow
         uses: actions/setup-python@v6
@@ -62,11 +65,15 @@ jobs:
           python -m pip install --quiet pillow
           python ci/vitrines.py
 
-      - name: Joindre les visuels et les rendus bruts
+      - name: Joindre les visuels, les rendus bruts et les fichiers du logo
         uses: actions/upload-artifact@v7
         with:
           name: visuels
           path: |
             doc/images/
+            doc/logo/bridgeplus-logo.png
             desktop/build/captures/readme/
+            desktop/icons/bridgeplus.ico
+            app/src/main/res/mipmap-*/ic_launcher_*.png
+            app/src/main/res/drawable/ic_launcher_monochrome.xml
           retention-days: 14

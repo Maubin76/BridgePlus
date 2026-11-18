@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<!--
+	Vingt propositions de logo pour BridgePlus, sans la croix « Plus », dans
+	la direction artistique de l'appli : tuile noire où la brume grise
+	descend du haut sur une grille fine, avec du grain ; emblème au trait
+	arrondi, comme le jeu d'icônes ; deux tons comme les titres (« Relié à
+	Bureau. ») : gris pour le contexte, blanc pour l'essentiel. Le trait
+	s'épaissit aux petites tailles (taille optique) pour rester visible en
+	16 px dans la zone de notification.
+	Ouvrir dans un navigateur ; propositions.png en est la capture.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>BridgePlus — vingt propositions de logo</title>
+<style>
+	@font-face { font-family: Satoshi; font-weight: 300; src: url("../../../ui/src/commonMain/composeResources/font/satoshi_light.ttf"); }
+	@font-face { font-family: Satoshi; font-weight: 400; src: url("../../../ui/src/commonMain/composeResources/font/satoshi_regular.ttf"); }
+	@font-face { font-family: Satoshi; font-weight: 500; src: url("../../../ui/src/commonMain/composeResources/font/satoshi_medium.ttf"); }
+	body        { margin: 0; background: #0B0B0C; color: #F5F5F5; font-family: Satoshi, sans-serif; }
+	header      { padding: 44px 48px 20px; background: linear-gradient(#9A9A9C55, #0B0B0C 160px); }
+	h1          { font-weight: 300; font-size: 44px; margin: 0 0 10px; letter-spacing: -0.025em; }
+	h1 span     { color: #9C9C9E; }
+	header p    { color: #9C9C9E; margin: 0; font-size: 16px; max-width: 1180px; line-height: 1.5; }
+	.grid       { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding: 8px 48px 48px; }
+	.card       { background: #141415; border: 1px solid #2A2A2C; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+	.top        { display: flex; gap: 18px; align-items: flex-end; }
+	.sizes      { display: flex; align-items: flex-end; gap: 10px; }
+	.card h2    { font-weight: 400; font-size: 19px; margin: 4px 0 0; letter-spacing: -0.01em; }
+	.card h2 i  { font-style: normal; color: #6A6A6C; margin-right: 6px; }
+	.card p     { color: #9C9C9E; margin: 0; font-size: 13.5px; line-height: 1.45; }
+	.bar        { display: flex; gap: 10px; }
+	.bar div    { flex: 1; border-radius: 10px; height: 34px; display: flex; align-items: center; justify-content: center; gap: 10px; font: 12px "Segoe UI", sans-serif; }
+	.dark       { background: #202020; color: #DADADA; }
+	.light      { background: #F3F3F3; color: #333; }
+	.brand      { background: #050505; border: 1px solid #2A2A2C; color: #9C9C9E !important; font: 400 15px Satoshi, sans-serif !important; }
+	.brand b    { font-weight: 400; color: #F5F5F5; }
+	svg         { display: block; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+	<defs>
+		<!-- Brume : gris en haut, noir à partir des deux tiers (décor des écrans clés). -->
+		<linearGradient id="mist" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#6E6E71"/>
+			<stop offset="0.42" stop-color="#2E2E30"/>
+			<stop offset="0.72" stop-color="#050505"/>
+			<stop offset="1" stop-color="#050505"/>
+		</linearGradient>
+		<!-- Grille fine, estompée vers le bas. -->
+		<pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse">
+			<path d="M12,0 V12 M0,12 H12" fill="none" stroke="#FFFFFF" stroke-opacity="0.09" stroke-width="0.5"/>
+		</pattern>
+		<linearGradient id="gridFade" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#FFFFFF"/>
+			<stop offset="0.55" stop-color="#FFFFFF"/>
+			<stop offset="0.9" stop-color="#000000"/>
+		</linearGradient>
+		<mask id="gridMask"><rect width="120" height="120" fill="url(#gridFade)"/></mask>
+		<!-- Grain léger. -->
+		<filter id="grain" x="0" y="0" width="100%" height="100%">
+			<feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="3" result="noise"/>
+			<feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.09 0"/>
+			<feComposite in2="SourceGraphic" operator="in"/>
+		</filter>
+		<clipPath id="tileClip"><rect x="4" y="4" width="112" height="112" rx="26"/></clipPath>
+	</defs>
+</svg>
+
+<header>
+	<h1>BridgePlus, <span>vingt propositions de logo.</span></h1>
+	<p>Sans la croix « Plus ». La matière des écrans de BridgePlus : tuile noire, brume grise qui descend du haut sur une grille fine ; emblème au trait comme les icônes de l'appli, en deux tons comme les titres (gris pour le contexte, blanc pour l'essentiel). Chaque proposition est vue en grand, en 48, 32, 24 et 16 px, à côté du nom et sur la barre des tâches.</p>
+</header>
+
+<div class="grid" id="cards"></div>
+
+<script>
+const M = "#9C9C9E";																	// gris du contexte (text-muted)
+const W = "#F5F5F5";																	// blanc de l'essentiel (text)
+
+/*
+	Propositions : nom, explication, traits de l'emblème (espace 0 à 100) :
+	[tracé, ton, pointillé (facultatif), facteur d'épaisseur (facultatif)] ;
+	un tracé « M x,y h0 » dessine un point. « text » remplace les traits par
+	une lettre en Satoshi.
+*/
+const kProposals = [
+	{ name: "Le pont suspendu", text: "Deux pylônes et le tablier en gris, le câble en blanc : la silhouette de pont la plus reconnaissable.",
+	  lines: [["M10,72 H90 M32,30 V80 M68,30 V80", M], ["M10,62 C18,58 28,46 32,30 Q50,76 68,30 C72,46 82,58 90,62", W]] },
+	{ name: "L'arche et le tablier", text: "Un tablier blanc posé sur une arche grise : le pont réduit à deux traits.",
+	  lines: [["M18,80 C18,58 33,48 50,48 C67,48 82,58 82,80", M], ["M8,40 H92", W]] },
+	{ name: "Le viaduc", text: "Trois arches grises sous un tablier blanc : un ouvrage d'art, posé et régulier.",
+	  lines: [["M10,82 V60 A13,13 0 0 1 36,60 A13,13 0 0 1 62,60 A13,13 0 0 1 88,60 V82 M36,60 V82 M62,60 V82", M], ["M6,40 H94", W]] },
+	{ name: "Le pont et son reflet", text: "L'arche en blanc, son reflet en pointillé gris dans l'eau : ensemble, un cercle, comme une liaison bouclée.",
+	  lines: [["M14,54 A36,36 0 0 0 86,54", M, "7 7"], ["M6,54 H94", M], ["M14,54 A36,36 0 0 1 86,54", W]] },
+	{ name: "Le dos d'âne", text: "Un seul trait qui franchit une bosse : gris jusqu'au sommet, blanc après. Le passage d'un appareil à l'autre.",
+	  lines: [["M8,64 H30 C38,64 40,40 50,40", M], ["M50,40 C60,40 62,64 70,64 H92", W]] },
+	{ name: "Deux points, un arc", text: "Les deux appareils en points blancs, le pont en arc gris au-dessus : la liaison la plus simple qui soit.",
+	  lines: [["M18,68 C18,26 82,26 82,68", M], ["M18,68 h0 M82,68 h0", W, null, 2.6]] },
+	{ name: "Le fil", text: "Un fil blanc en pointillé, qui ondule d'un point gris à l'autre : la liaison sans câble, par le Wi-Fi.",
+	  lines: [["M18,66 C36,26 64,92 82,34", W, "8 8"], ["M18,66 h0 M82,34 h0", M, null, 2.6]] },
+	{ name: "Les maillons", text: "Les deux maillons de « Relié », l'icône de l'accueil : le téléphone en gris, le PC en blanc.",
+	  lines: [["M42,58 a14,14 0 0 0 20,0 l12,-12 a14,14 0 0 0 -20,-20 l-4,4", M], ["M58,42 a14,14 0 0 0 -20,0 l-12,12 a14,14 0 0 0 20,20 l4,-4", W]] },
+	{ name: "Les crochets", text: "Deux arcs tournés l'un vers l'autre, « ( ) » : les deux appareils, et l'espace entre eux que BridgePlus franchit.",
+	  lines: [["M42,22 A28,28 0 0 0 42,78", M], ["M58,22 A28,28 0 0 1 58,78", W]] },
+	{ name: "Les ondes", text: "Chaque appareil émet vers l'autre, en ondes de Wi-Fi : gris d'un côté, blanc de l'autre.",
+	  lines: [["M14,50 h0", M, null, 2.2], ["M22.5,41.5 A12,12 0 0 1 22.5,58.5 M29.6,34.4 A22,22 0 0 1 29.6,65.6 M36.6,27.4 A32,32 0 0 1 36.6,72.6", M], ["M86,50 h0", W, null, 2.2], ["M77.5,41.5 A12,12 0 0 0 77.5,58.5 M70.4,34.4 A22,22 0 0 0 70.4,65.6 M63.4,27.4 A32,32 0 0 0 63.4,72.6", W]] },
+	{ name: "L'échange", text: "Deux flèches qui se croisent : ce qui part en blanc, ce qui revient en gris. Le presse-papiers et les fichiers dans les deux sens.",
+	  lines: [["M82,62 H20 M32,50 L20,62 L32,74", M], ["M18,38 H80 M68,26 L80,38 L68,50", W]] },
+	{ name: "Le téléphone et le PC", text: "Le téléphone en gris, l'écran du PC en blanc, et la liaison en pointillé entre eux. Dit exactement ce que fait l'appli.",
+	  lines: [["M17,30 H27 A5,5 0 0 1 32,35 V69 A5,5 0 0 1 27,74 H17 A5,5 0 0 1 12,69 V35 A5,5 0 0 1 17,30 Z", M], ["M36,52 H44", M, "1 6"], ["M52,30 H86 A4,4 0 0 1 90,34 V60 A4,4 0 0 1 86,64 H52 A4,4 0 0 1 48,60 V34 A4,4 0 0 1 52,30 Z M62,76 H76 M69,64 V76", W]] },
+	{ name: "Les deux cercles", text: "Deux cercles qui se chevauchent, gris et blanc : deux appareils et ce qu'ils partagent.",
+	  lines: [["M14,50 A24,24 0 1 0 62,50 A24,24 0 1 0 14,50", M], ["M38,50 A24,24 0 1 0 86,50 A24,24 0 1 0 38,50", W]] },
+	{ name: "La maison", text: "La maison en gris, une arche blanche pour porte : la liaison ne vit que chez vous.",
+	  lines: [["M14,48 L50,18 L86,48 M24,40 V82 H76 V40", M], ["M40,82 V62 A10,10 0 0 1 60,62 V82", W]] },
+	{ name: "Les arches emboîtées", text: "Trois arches l'une dans l'autre, du gris au blanc : un pont, et un signal qui porte.",
+	  lines: [["M14,76 A36,36 0 0 1 86,76", M], ["M27,76 A23,23 0 0 1 73,76", M], ["M40,76 A10,10 0 0 1 60,76", W]] },
+	{ name: "Le plan", text: "Une arche blanche tracée sur une grille grise, comme un plan d'architecte : la grille de l'interface, et le pont.",
+	  lines: [["M10,30 H90 M10,50 H90 M10,70 H90 M30,12 V88 M50,12 V88 M70,12 V88", M, null, 0.45], ["M14,70 C14,40 30,30 50,30 C70,30 86,40 86,70", W]] },
+	{ name: "Le b", text: "Un b en Satoshi léger, la police de l'appli, comme ses grands titres fins. Le plus typographique.",
+	  letter: "b" },
+	{ name: "Le B en arches", text: "Une lettre B tracée au trait : la hampe en gris, les deux boucles en blanc, comme deux arches couchées.",
+	  lines: [["M30,16 V84", M], ["M30,16 H50 A16,16 0 0 1 50,48 H30 M30,48 H54 A18,18 0 0 1 54,84 H30", W]] },
+	{ name: "Le pont haubané", text: "Un pylône blanc d'où partent les haubans gris qui tiennent le tablier : moderne, net, symétrique.",
+	  lines: [["M8,70 H92 M50,22 L14,70 M50,22 L31,70 M50,22 L69,70 M50,22 L86,70", M], ["M50,12 V84", W]] },
+	{ name: "Le passage", text: "Une arche grise sous laquelle passent des données, en tirets blancs : ce qui traverse le pont.",
+	  lines: [["M14,82 V58 A36,36 0 0 1 86,58 V82", M], ["M28,66 H38 M46,66 H56 M64,66 H74", W]] }
+];
+
+/*
+	Épaisseur du trait selon la taille (taille optique) : fin en grand,
+	plus épais en petit pour garder au moins un pixel.
+	inSize : côté (px)
+*/
+function strokeFor(inSize)
+{
+	if (inSize >= 96) return 5;
+	if (inSize >= 48) return 6.5;
+	if (inSize >= 24) return 8.5;
+	return 10.5;
+}
+
+/*
+	Emblème : traits ou lettre, à une taille donnée.
+	inOne   : proposition
+	inSize  : côté (px)
+	inMuted : couleur du contexte
+	inText  : couleur de l'essentiel
+*/
+function emblem(inOne, inSize, inMuted, inText)
+{
+	const vWidth = strokeFor(inSize);
+	if (inOne.letter)
+	{
+		const vWeight = inSize >= 96 ? 300 : inSize >= 40 ? 400 : 500;
+		return `<text x="50" y="82" text-anchor="middle" font-family="Satoshi" font-weight="${vWeight}" font-size="100" fill="${inText}">${inOne.letter}</text>`;
+	}
+	return inOne.lines.map(([vPath, vTone, vDash, vFactor]) => {
+		const vColor = vTone === M ? inMuted : inText;
+		const vDashes = vDash ? ` stroke-dasharray="${vDash.split(" ").map(vOne => vOne * vWidth / 5).join(" ")}"` : "";
+		return `<path d="${vPath}" fill="none" stroke="${vColor}" stroke-width="${vWidth * (vFactor || 1)}" stroke-linecap="round" stroke-linejoin="round"${vDashes}/>`;
+	}).join("");
+}
+
+/*
+	Tuile du logo : brume, grille, grain, emblème, liseré.
+	inOne  : proposition
+	inSize : côté (px)
+*/
+function tile(inOne, inSize)
+{
+	const vGrid = inSize >= 48 ? `<rect x="4" y="4" width="112" height="112" fill="url(#grid)" mask="url(#gridMask)" clip-path="url(#tileClip)"/>` : "";
+	return `<svg width="${inSize}" height="${inSize}" viewBox="0 0 120 120">
+		<rect x="4" y="4" width="112" height="112" rx="26" fill="url(#mist)"/>
+		${vGrid}
+		<rect x="4" y="4" width="112" height="112" rx="26" fill="#808080" filter="url(#grain)"/>
+		<g transform="translate(17,17) scale(0.86)">${emblem(inOne, inSize, M, W)}</g>
+		<rect x="4.5" y="4.5" width="111" height="111" rx="25.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.14"/>
+	</svg>`;
+}
+
+const vCards = document.getElementById("cards");
+kProposals.forEach((vOne, vIndex) => {
+	vCards.insertAdjacentHTML("beforeend", `
+		<section class="card">
+			<div class="top">
+				${tile(vOne, 132)}
+				<div class="sizes">${tile(vOne, 48)}${tile(vOne, 32)}${tile(vOne, 24)}${tile(vOne, 16)}</div>
+			</div>
+			<h2><i>${vIndex + 1}</i>${vOne.name}</h2>
+			<p>${vOne.text}</p>
+			<div class="bar">
+				<div class="brand">${tile(vOne, 22)}<span>Bridge<b>Plus</b></span></div>
+				<div class="dark">˄ ${tile(vOne, 16)} 14:32</div>
+				<div class="light">˄ ${tile(vOne, 16)} 14:32</div>
+			</div>
+		</section>`);
+});
+</script>
+</body>
+</html>

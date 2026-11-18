@@ -19,8 +19,8 @@ private val kVeil  = Color(0x8C0B0B0C)												// voile sur le logo quand la 
 private val kInk   = Color(0xFF0B0B0C)												// encre des marques
 
 /*
-	Icône de la zone de notification : le logo argent de BridgePlus, net quand
-	la liaison est établie, voilé sinon. Une marque s'ajoute selon l'état,
+	Icône de la zone de notification : le logo de BridgePlus, net quand la
+	liaison est établie, voilé sinon. Une marque s'ajoute selon l'état,
 	pour que la forme change et pas seulement la teinte : barre oblique hors
 	de la maison, anneau pour un téléphone absent, pastille rouge pour une
 	erreur, rien quand tout va bien.
@@ -35,7 +35,7 @@ fun trayImage(
 	val vImage = ImageBitmap(inSize, inSize)													// image
 	val vSide  = inSize.toFloat()																// côté
 	CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(vImage), Size(vSide, vSide)) {
-		drawLogo(vSide, inMaterial = inSize >= 48)
+		drawLogo(vSide, inDetail = inSize >= 48)
 		if (inLook != LinkLook.Connected) drawRoundRect(kVeil, cornerRadius = CornerRadius(vSide * 0.26f))
 		val vStroke = (vSide / 9f).coerceAtLeast(2f)												// épaisseur des marques
 		when (inLook)
