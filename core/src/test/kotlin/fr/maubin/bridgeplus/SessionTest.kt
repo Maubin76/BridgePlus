@@ -363,7 +363,10 @@ class SessionTest
 
 	/*
 		Écoute limitée : un serveur lié à 127.0.0.1 n'accepte rien sur
-		127.0.0.2 ; retirer l'adresse ferme l'écoute.
+		127.0.0.2 ; retirer l'adresse ferme l'écoute. La fermeture est
+		attendue : sous Linux, quand un fil attend une connexion, le noyau ne
+		libère l'écoute qu'après le réveil de ce fil, un instant après
+		ServerSocket.close().
 	*/
 	@Test
 	fun listensOnlyOnGivenAddresses()
@@ -374,7 +377,7 @@ class SessionTest
 		assertNull("connexion acceptée hors des adresses d'écoute", answered("127.0.0.2", vPort))
 		vHub.bind(emptyList())
 		assertEquals(0, vHub.port)
-		assertNull("écoute encore ouverte", answered("127.0.0.1", vPort))
+		awaitTrue { answered("127.0.0.1", vPort) == null }
 	}
 
 	/*

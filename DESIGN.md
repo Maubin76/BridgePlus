@@ -74,7 +74,7 @@ radii:
 
 # BridgePlus — direction artistique
 
-BridgePlus **reprend la direction artistique de KeePlus**, à l'identique : mêmes couleurs, mêmes polices, même décor, mêmes composants. Seuls changent l'emblème (un pont à la place du bouclier) et les écrans. Ce choix remplace la proposition initiale d'un thème clair et sombre avec un accent orange.
+BridgePlus **reprend la direction artistique de KeePlus**, à l'identique : mêmes couleurs, mêmes polices, même décor, mêmes composants. Changent : le logo, dans la matière de l'appli (voir « Logo »), l'emblème du décor (un pont à la place du bouclier) et les écrans. Ce choix remplace la proposition initiale d'un thème clair et sombre avec un accent orange.
 
 ## En une phrase
 Du noir profond et de l'argent : une brume grise descend du haut de l'écran sur une grille très fine, un grand pont flou flotte en arrière-plan, et l'état de la liaison s'écrit en grand, fin, en deux tons.
@@ -105,18 +105,18 @@ C'est l'information principale. Il a toujours une **icône et un texte** ; la co
 
 - **En haut de l'accueil** : l'icône dans un disque `surface-high` au contour `rule`, puis le titre en `hero`.
 - **Pastille d'état** dans les listes : « Relié » est une pastille active (fond `text`, texte `void`), comme le filtre actif de KeePlus ; les autres états ont un contour `rule`.
-- **Icône de la zone de notification (PC)** : le logo argent, net si relié, voilé de noir sinon, avec une marque qui change sa forme : barre oblique hors de la maison, anneau pour un téléphone absent, pastille `danger` pour une erreur. L'info-bulle reprend le titre.
+- **Icône de la zone de notification (PC)** : le logo, net si relié, voilé de noir sinon, avec une marque qui change sa forme : barre oblique hors de la maison, anneau pour un téléphone absent, pastille `danger` pour une erreur. L'info-bulle reprend le titre.
 
 ## Le décor (écrans clés seulement)
 Il s'applique à l'**accueil du téléphone**. Il se compose de trois couches, celles de KeePlus :
 1. **Brume** : dégradé vertical de `mist-top` (en haut) vers `mist-mid` (vers 40 %), puis `void` (à partir de 70 %).
 2. **Grille** : traits de 1 px en `grid-line`, avec un pas de 48 dp, estompés vers le bas.
-3. **Emblème** : le pont en `emblem`, très agrandi (environ 1,6 fois la largeur de l'écran), décentré à droite, flou de 32 dp, coupé par les bords. Un grain léger couvre l'ensemble.
+3. **Emblème** : un pont (tablier et arche) en `emblem`, très agrandi (environ 1,6 fois la largeur de l'écran), décentré à droite, flou de 32 dp, coupé par les bords. Un grain léger couvre l'ensemble.
 
 Les **écrans de travail** (Appareils, Réglages, fenêtre du PC) ont un fond `ground`, la grille et le grain, et un léger voile de brume sur les 120 premiers dp.
 
 ## Logo
-Un **pont noir** (tablier fin posé sur une arche) surmonté du « + » de la gamme, sa moitié droite en gris (facette), **gravé dans une plaque d'aluminium brossé** au chanfrein usiné, avec une lumière unique en haut à gauche. C'est la matière du logo de KeePlus. En dessous de 40 dp, la version est à plat. L'icône adaptative d'Android (plaque brossée en fond, pont gravé au premier plan, version monochrome) et l'icône Windows sont générées par `LogoAssetsTest`.
+Le logo prend la **matière de l'appli**, et non plus celle de KeePlus : une tuile noire où la **brume grise** descend du haut sur la **grille fine** du décor, et, **au trait arrondi** comme les icônes, le **téléphone en gris**, deux points de liaison, et **l'écran du PC en blanc**, en deux tons comme les titres. Pas de « + ». Le trait s'épaissit aux petites tailles (taille optique) pour rester visible en 16 px ; la grille disparaît en dessous de 40 dp. À côté du logo, le nom reste d'une seule couleur : en deux tons, « Bridge » se perdrait dans la brume claire des écrans clés. L'icône adaptative d'Android (brume et grille en fond, emblème au premier plan, version monochrome vectorielle) et l'icône Windows sont générées par `LogoAssetsTest`. Le grand pont flou du décor reste un pont (tablier et arche), sans « + ».
 
 ## Composants (ceux de KeePlus)
 - **Bouton principal** (`SilverButton`) : pilule pleine largeur, dégradé `silver-light` → `silver-dark`, liseré clair en haut, reflet toutes les 6 s, texte `silver-ink`. Un seul par écran.

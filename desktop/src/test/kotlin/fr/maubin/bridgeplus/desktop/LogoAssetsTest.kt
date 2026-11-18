@@ -9,10 +9,13 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
-import fr.maubin.bridgeplus.ui.theme.drawLogoMetal
+import fr.maubin.bridgeplus.ui.theme.drawLogoGround
 import fr.maubin.bridgeplus.ui.theme.drawLogoMark
+import fr.maubin.bridgeplus.ui.theme.kDotRadius
+import fr.maubin.bridgeplus.ui.theme.kLinkDots
+import fr.maubin.bridgeplus.ui.theme.kPhoneData
+import fr.maubin.bridgeplus.ui.theme.kScreenData
 import fr.maubin.bridgeplus.ui.theme.logoImage
-import fr.maubin.bridgeplus.ui.theme.bridgeData
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import org.junit.Test
@@ -23,6 +26,7 @@ private const val kAdaptive = 108.0														// côté de l'icône adaptativ
 private const val kVisible  = 72.0														// partie visible après découpe par le lanceur (dp)
 private val kDensities      = mapOf("mdpi" to 1f, "hdpi" to 1.5f, "xhdpi" to 2f, "xxhdpi" to 3f, "xxxhdpi" to 4f)	// densités Android
 private val kIcoSizes       = listOf(16, 24, 32, 48, 64, 128, 256)						// tailles du fichier .ico
+private const val kMonoStroke = 6.5															// trait de l'icône monochrome (repère de l'emblème)
 
 /*
 	Image dessinée par un bloc.
@@ -68,10 +72,10 @@ private fun ico(inImages: Map<Int, ByteArray>): ByteArray
 
 /*
 	Génère les fichiers du logo à partir de son dessin (module :ui) : image
-	de référence, icône Windows, icône adaptative Android (plaque brossée
-	plein cadre et pont gravé, par densité ; version monochrome
-	vectorielle). À relancer
-	après toute retouche du logo ; le résultat est versionné.
+	de référence, icône Windows, icône adaptative Android (brume et grille
+	plein cadre, emblème au trait, par densité ; version monochrome
+	vectorielle). À relancer après toute retouche du logo (la CI le fait
+	dans le workflow « Visuels du README ») ; le résultat est versionné.
 */
 class LogoAssetsTest
 {
@@ -87,38 +91,54 @@ class LogoAssetsTest
 		File(vRoot, "doc/logo").mkdirs()
 		File(vRoot, "doc/logo/bridgeplus-logo.png").writeBytes(png(logoImage(1024)))
 
-		// Icône Windows : à plat en très petit, matière complète au-delà.
-		File(vRoot, "desktop/icons/bridgeplus.ico").writeBytes(ico(kIcoSizes.associateWith { png(logoImage(it, it >= 48)) }))
+		// Icône Windows : sans grille en très petit, trait épaissi selon la taille.
+		File(vRoot, "desktop/icons/bridgeplus.ico").writeBytes(ico(kIcoSizes.associateWith { png(logoImage(it)) }))
 
-		// Icône adaptative Android : la plaque brossée remplit toute la forme du lanceur (fond), le
-		// pont gravé est à l'échelle d'un logo de 72 dp, la partie toujours visible (premier plan).
+		// Icône adaptative Android : la brume et la grille remplissent toute la forme du lanceur
+		// (fond), l'emblème est à l'échelle d'un logo de 72 dp, la partie toujours visible (premier plan).
 		for ((vName, vScale) in kDensities)
 		{
 			val vSide   = (kAdaptive * vScale).toInt()													// côté en pixels
 			val vLogo   = (kVisible * vScale).toFloat()													// côté du logo en pixels
 			val vOffset = ((kAdaptive - kVisible) / 2 * vScale).toFloat()								// marge
 			val vDir    = File(vRoot, "app/src/main/res/mipmap-$vName").apply { mkdirs() }			// dossier de la densité
-			File(vDir, "ic_launcher_background.png").writeBytes(png(image(vSide) { drawLogoMetal() }))
+			File(vDir, "ic_launcher_background.png").writeBytes(png(image(vSide) { drawLogoGround(vLogo / 100f) }))
 			File(vDir, "ic_launcher_foreground.png").writeBytes(png(image(vSide) { drawLogoMark(vLogo, Offset(vOffset, vOffset)) }))
 		}
 
-		// Version monochrome (icônes thématiques d'Android 13 et plus) : pont, vectoriel.
-		val vX = (kAdaptive - kVisible) / 2 + 22.0 * kVisible / 100									// repère du pont dans le carré de 108
-		val vY = (kAdaptive - kVisible) / 2 + 22.0 * kVisible / 100
-		val vS = 56.0 * kVisible / 100
+		// Version monochrome (icônes thématiques d'Android 13 et plus, petite icône des
+		// notifications) : emblème au trait, vectoriel. Le groupe pose le repère de l'emblème dans le
+		// logo de 72 dp centré dans le carré de 108 (mêmes proportions que drawLogoMark) ; les points de
+		// la liaison sont de petits disques (pas de pointillés dans les icônes vectorielles).
+		val vScale = 72.0 / 100 * .768																	// repère de l'emblème vers le carré de 108
+		val vLeft  = (kAdaptive - kVisible) / 2 + 72.0 / 100 * 11.6										// position du repère
+		val vTop   = (kAdaptive - kVisible) / 2 + 72.0 / 100 * 9.3
+		val vDot   = minOf(kMonoStroke / 2, kDotRadius.toDouble())										// rayon d'un point
+		val vDots  = kLinkDots.joinToString(" ") { "M${it.x - vDot},${it.y} a$vDot,$vDot 0 1 0 ${2 * vDot},0 a$vDot,$vDot 0 1 0 ${-2 * vDot},0" }	// points
 		File(vRoot, "app/src/main/res/drawable/ic_launcher_monochrome.xml").writeText(
 			"""
 			|<?xml version="1.0" encoding="utf-8"?>
-			|<!-- Généré par LogoAssetsTest : pont et « + », pour les icônes thématiques. -->
+			|<!-- Généré par LogoAssetsTest : téléphone, liaison et écran du PC, pour les icônes thématiques. -->
 			|<vector xmlns:android="http://schemas.android.com/apk/res/android"
 			|	android:width="108dp"
 			|	android:height="108dp"
 			|	android:viewportWidth="108"
 			|	android:viewportHeight="108">
-			|	<path
-			|		android:fillColor="#FF000000"
-			|		android:fillType="evenOdd"
-			|		android:pathData="${bridgeData(vX, vY, vS)}" />
+			|	<group
+			|		android:translateX="$vLeft"
+			|		android:translateY="$vTop"
+			|		android:scaleX="$vScale"
+			|		android:scaleY="$vScale">
+			|		<path
+			|			android:strokeColor="#FF000000"
+			|			android:strokeWidth="$kMonoStroke"
+			|			android:strokeLineCap="round"
+			|			android:strokeLineJoin="round"
+			|			android:pathData="$kPhoneData $kScreenData" />
+			|		<path
+			|			android:fillColor="#FF000000"
+			|			android:pathData="$vDots" />
+			|	</group>
 			|</vector>
 			|""".trimMargin()
 		)
